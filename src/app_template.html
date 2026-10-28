@@ -869,11 +869,10 @@ function draw() {
   }
   if (S.tab === "route" && S.step >= 0 && STEPS[S.step]) { const s = STEPS[S.step], r = ROOM.get(s.room);
     const ol = onFloor(r, s.f);
-    if (shown.has(s.f) && ol) { let [x, y] = P(s.f, ol.lp); if (S.show.labels) x -= r.name.length * (atlas ? Math.min(4.2, ol.fs) : ol.fs) * .27 + 5; // beside the name, like the "you are here" dot
+    if (shown.has(s.f) && ol) { const [x, y] = P(s.f, S.show.labels ? ol.mp : ol.lp); // beside the name, like the "you are here" dot
       el("circle", {class: "me-ring", cx: x, cy: y, r: 5}, gTags); el("circle", {class: "walker", cx: x, cy: y, r: 3.4}, gTags); } }
   const me = ROOM.get(S.pos); const mo = me.outlines.find(o => shown.has(o.floor));
-  if (mo && !(S.tab === "route" && S.step >= 0)) { const fs = atlas ? Math.min(4.2, mo.fs) : mo.fs; let [x, y] = P(mo.floor, mo.lp);
-    if (S.show.labels) x -= me.name.length * fs * .27 + 5;
+  if (mo && !(S.tab === "route" && S.step >= 0)) { const [x, y] = P(mo.floor, S.show.labels ? mo.mp : mo.lp); // a spot inside the room beside its name (build.py marker_point)
     el("circle", {class: "me-ring", cx: x, cy: y, r: 4}, svg); el("circle", {class: "me", cx: x, cy: y, r: 3}, svg); }
   $("#floorname").textContent = atlas ? "Whole estate" : FLOOR.get(S.floor).label;
   drawLegend();
@@ -884,7 +883,7 @@ const TOKAT = new Map(D.tokens.filter(t => t.img && t.kind !== "event").map(t =>
 let OBST = null; const SLOTS = new Map();
 function obstacles() { // per floor, in floor coordinates: [x0, y0, x1, y1]
   const o = new Map(D.floors.map(f => [f.id, [...f.stripes, ...f.icons, ...f.sealed.map(r => [r[0], r[1], r[0] + r[2], r[1] + r[3]])]]));
-  for (const r of D.rooms) for (const ol of r.outlines) o.get(ol.floor).push(labelBox(r, ol)); // names can spill into the next room
+  for (const r of D.rooms) for (const ol of r.outlines) o.get(ol.floor).push(labelBox(r, ol), [ol.mp[0] - 4.2, ol.mp[1] - 4.2, ol.mp[0] + 4.2, ol.mp[1] + 4.2]); // names can spill into the next room; the "you are here" dot
   for (const d of D.doors) {
     for (const b of d.bars) o.get(b.f).push([b.r[0] - .5, b.r[1] - .5, b.r[0] + b.r[2] + .5, b.r[1] + b.r[3] + .5]);
     if (d.kind === "opening") o.get(d.fa).push([d.pa[0] - 3, d.pa[1] - 3, d.pa[0] + 3, d.pa[1] + 3]);

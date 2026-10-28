@@ -6,7 +6,7 @@ progression logic below, checked against the GameFAQs guides in the survival-hor
 import datetime, json, re, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
-from geometry import door_point, label_point, pts, inside, area as poly_area
+from geometry import door_point, label_point, pts, inside, edge_dist, area as poly_area
 
 ROOT = Path(sys.argv[1])
 OUT_JSON, OUT_HTML = Path(sys.argv[2]), Path(sys.argv[3])
@@ -286,7 +286,8 @@ def main():
         lp = label_point(ol["poly"])
         w, h = max(xs) - min(xs), max(ys) - min(ys)
         fs = max(2.2, min(7.0, w * 0.92 / (len(ol["name"]) * 0.5), h * 0.42))
-        r["outlines"].append({"floor": ol["floor"], "poly": ol["poly"], "lp": list(lp), "fs": round(fs, 2), "a": poly_area(ol["poly"])})
+        r["outlines"].append({"floor": ol["floor"], "poly": ol["poly"], "lp": list(lp), "fs": round(fs, 2), "a": poly_area(ol["poly"]),
+                              "mp": marker_point(P, lp, fs, ol["name"])})
         r["pages"].append(ol["id"])
     for r in rooms.values():  # biggest piece first: it is the room's home floor
         r["outlines"].sort(key=lambda x: -x["a"])
@@ -404,6 +405,9 @@ def main():
             st["p"] = settle(r["id"], st["f"], st["to"], st["p"])
         for st in r["stairs"]:
             st["tp"] = next(x["p"] for x in r["stairs"] if x["f"] == st["to"])
+    for r in rooms.values():  # the "you are here" dot keeps clear of the floor badges too
+        for ol in r["outlines"]:
+            ol["mp"] = marker_point(pts(ol["poly"]), ol["lp"], ol["fs"], r["name"], taken.get(ol["floor"], []))
     used = {(b["f"], tuple(b["r"])) for d in doors for b in d["bars"]}
     sealed = {fid: [m["rect"] for m in v["doors"] if (fid, tuple(m["rect"])) not in used] for fid, v in sym.items()}
 
@@ -510,6 +514,26 @@ ITEM_ICON = {
     "battery-pack": 121, "shaft": 122, "cylinder": 123, "mask-without-eyes-nose-or-mouth": 125, "mask-without-a-nose": 126,
     "mask-without-eyes": 127, "mask-without-a-mouth": 128, "music-mid-pages": 129,
 }
+
+
+def marker_point(P, lp, fs, name, avoid=(), r=3.6):
+    """Where the "you are here" dot goes in a room: inside the walls with room to spare and clear of the name.
+    Beside the name first (left, right, above, below), else the nearest open spot to it, else the name's own point."""
+    lw, (lx, ly) = len(name) * fs * 0.56, lp
+    box = (lx - lw / 2 - r, ly - fs * 0.75 - r, lx + lw / 2 + r, ly + fs * 0.45 + r)
+    clear = lambda q, b: not (b[0] - r < q[0] < b[2] + r and b[1] - r < q[1] < b[3] + r)
+    ok = lambda q: inside(q, P) and edge_dist(q, P) >= r + 0.4 and not (box[0] < q[0] < box[2] and box[1] < q[1] < box[3]) and all(clear(q, b) for b in avoid)
+    for q in ((lx - lw / 2 - r - 1, ly), (lx + lw / 2 + r + 1, ly), (lx, ly - fs * 0.75 - r - 1), (lx, ly + fs * 0.45 + r + 1)):
+        if ok(q):
+            return [round(q[0], 1), round(q[1], 1)]
+    xs, ys = [p[0] for p in P], [p[1] for p in P]
+    best = None
+    for i in range(int((max(xs) - min(xs)) / 1.2) + 1):
+        for j in range(int((max(ys) - min(ys)) / 1.2) + 1):
+            q = (min(xs) + i * 1.2, min(ys) + j * 1.2)
+            if ok(q) and (best is None or (q[0] - lx) ** 2 + (q[1] - ly) ** 2 < (best[0] - lx) ** 2 + (best[1] - ly) ** 2):
+                best = q
+    return [round(best[0], 1), round(best[1], 1)] if best else [round(lx, 1), round(ly, 1)]
 
 
 def media_plan(media):
