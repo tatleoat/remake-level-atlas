@@ -1,0 +1,10 @@
+media/
+*.zip
+work/
+source/
+__pycache__/
+*.pkg
+*.bin
+*.cue
+*.iso
+*.chd

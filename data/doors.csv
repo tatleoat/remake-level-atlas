@@ -1,0 +1,135 @@
+room_a,room_b,a_to_b_needs,b_to_a_needs,floor_a,floor_b,source,note
+aqua-ring-entry,aqua-ring-exit,@other,,Aqua Ring B1,Aqua Ring B1,evil resource,
+aqua-ring-entry,aqua-ring-walkway,aqua-crates,aqua-crates,Aqua Ring B1,Aqua Ring B1,guide gate,Push three crates into the flooded corridor to float across
+aqua-ring-entry,room-002,,bookcases-002,Aqua Ring B1,Residence 1F,guide gate,Ladder hidden behind the two bookcases
+aqua-ring-exit,aqua-ring-storage,,,Aqua Ring B2,Aqua Ring B2,evil resource,
+aqua-ring-storage,aqua-ring-water-tank,,,Aqua Ring B2,Aqua Ring B2,evil resource,
+aqua-ring-storage,control-room,aqua-drained,aqua-drained,Aqua Ring B2,Aqua Ring B2,guide gate,Waterproof hatch; opens once the Aqua Ring is drained
+aqua-ring-walkway,control-room,control-key,control-key,Aqua Ring B1,Aqua Ring B1,evil resource,
+aqua-ring-walkway,guard-room,,,Aqua Ring B1,Aqua Ring B1,evil resource,
+armor-room,c-corridor,armor-key,armor-key,Mansion 2F,Mansion 2F,evil resource,
+art-room,hidden-wardrobe,closet-key,closet-key,Mansion 1F,Mansion 1F,evil resource,
+art-room,l-corridor,sword-key,sword-key,Mansion 1F,Mansion 1F,evil resource,
+art-room,main-hall,,,Mansion 1F,Mansion 1F,evil resource,
+attic,attic-entry,shield-key,shield-key,Mansion 2F,Mansion 2F,evil resource,
+attic-entry,pillar-room,,,Mansion 2F,Mansion 2F,evil resource,
+attic-entry,small-dining-room,,,Mansion 2F,Mansion 2F,evil resource,
+bar,tea-room,armor-key,armor-key,Mansion 1F,Mansion 1F,evil resource,
+bathroom,winding-corridor,,,Mansion 1F,Mansion 1F,evil resource,
+bedroom,deer-room,,,Mansion 2F,Mansion 2F,evil resource,
+boulder-passage-1,mining-area,,hex-crank,Courtyard B1,Courtyard B1,guide gate,Turn the passage with the Hexagon Crank
+boulder-passage-1,spider-room,,,Courtyard B1,Courtyard B1,evil resource,
+boulder-passage-2,straight-passage,,hex-crank,Courtyard B1,Courtyard B1,guide gate,Turn the passage with the Hexagon Crank (three times)
+boulder-passage-2,underground-statue-room,,,Courtyard B1,Courtyard B1,evil resource,
+c-corridor,east-wing-stairway,@other,,Mansion 2F,Mansion 2F,evil resource,
+c-corridor,main-hall,sword-key,sword-key,Mansion 2F,Mansion 2F,evil resource,
+c-corridor,pillar-room,armor-key,armor-key,Mansion 2F,Mansion 2F,evil resource,
+c-corridor,small-library,,,Mansion 2F,Mansion 2F,evil resource,
+cabin,forest-pathway,,,Courtyard 1F,Courtyard 1F,evil resource,
+cabin,lisas-room,@other,,Courtyard 1F,Courtyard B2,guide gate,Trapdoor; opened from below
+cell,cell-entrance,,tyrant-defeated,Laboratory B3,Laboratory B3,guide gate,Opens with the self-destruct sequence (or the Master Key)
+cell-entrance,pass-code-corridor,,prison-door,Laboratory B3,Laboratory B3,guide gate,Triple security door: an MO Disk read at each of the three terminals
+central-corridor,entry-corridor,crate-bridge | plant42-dead,crate-bridge | plant42-dead,Residence 1F,Residence 1F,guide gate,Plant 42's vines strike from holes in the floor; push the crate into a bridge (not needed once the plant is dead)
+central-corridor,gallery,gallery-key,gallery-key,Residence 1F,Residence 1F,evil resource,
+central-corridor,room-002,,,Residence 1F,Residence 1F,guide gate,
+concrete-passage-1,concrete-passage-2,,,Mansion B1,Mansion B1,evil resource,
+concrete-passage-1,secret-passage,,,Mansion B1,Mansion 1F,evil resource,
+concrete-passage-2,kitchen,,@other,Mansion B1,Mansion B1,guide gate,Bolted; unlocked from the basement tunnel side (Muchitsujo's guide)
+courtyard-study,dark-corridor,emblem-key,emblem-key,Mansion 1F,Mansion 1F,evil resource,
+crypt,graveyard,,arrowhead,Mansion B1,Mansion 1F,guide gate,Grave opens with the Arrowhead
+dark-corridor,east-wing-stairway,,,Mansion 1F,Mansion 1F,evil resource,
+dark-corridor,large-gallery,armor-key,armor-key,Mansion 1F,Mansion 1F,evil resource,
+dark-corridor,roofed-passage,,,Mansion 1F,Mansion 1F,evil resource,
+dark-corridor,winding-corridor,,,Mansion 1F,Mansion 1F,evil resource,
+death-passage,library,helmet-key,helmet-key,Mansion 3F,Mansion 3F,evil resource,
+death-passage,mirror-corridor,,,Mansion 2F,Mansion 2F,evil resource,
+deer-room,east-wing-stairway,armor-key,armor-key,Mansion 2F,Mansion 2F,evil resource,
+deer-room,fish-tank-room,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,Mansion 2F,Mansion 2F,evil resource,
+dining-room,main-hall,,,Mansion 1F,Mansion 1F,evil resource,
+dining-room,tea-room,,,Mansion 1F,Mansion 1F,evil resource,
+dining-room-2f,main-hall,,,Mansion 2F,Mansion 2F,evil resource,
+dining-room-2f,mirror-corridor,@other,,Mansion 2F,Mansion 2F,evil resource,
+dining-room-2f,west-wing-inner-stairway,sword-key,sword-key,Mansion 2F,Mansion 2F,evil resource,
+east-wing-stairway,east-wing-storeroom,,,Mansion 1F,Mansion 1F,evil resource,
+east-wing-stairway,resting-room,,,Mansion 2F,Mansion 2F,evil resource,
+east-wing-stairway,small-library,(no way through),,Mansion 2F,Mansion 2F,evil resource,
+elevator-corridor,kitchen,kitchen-fuse,kitchen-fuse,Mansion 2F,Mansion B1,guide gate,Kitchen lift; the fuse is at the end of the flooded B1 passage
+elevator-corridor,materials-room,,,Mansion 2F,Mansion 2F,evil resource,
+elevator-corridor,mirror-corridor,,@other,Mansion 2F,Mansion 2F,evil resource,
+elevator-entry,laboratory-lounge-room,,,Laboratory B3,Laboratory B3,evil resource,
+elevator-entry,main-laboratory-entrance,lab-elevator,lab-elevator,Laboratory B3,Laboratory B4,guide gate,Main elevator; powered from the Power Control Room
+elevator-entry,o-room,power-key,power-key,Laboratory B3,Laboratory B3,evil resource,
+elevator-entry,power-maze-a,,,Laboratory B3,Laboratory B3,evil resource,
+enrico-room,generator-room,,,Courtyard B1,Courtyard B1,evil resource,
+entry-corridor,rec-room,,,Residence 1F,Residence 1F,evil resource,
+entry-corridor,residence-storeroom,,,Residence 1F,Residence 1F,evil resource,
+entry-corridor,room-001,key-001 & crate-bridge | key-001 & plant42-dead,key-001,Residence 1F,Residence 1F,guide gate,
+entry-corridor,zigzag-path,,,Residence 1F,Courtyard 1F,evil resource,
+falls-area,main-garden,lift-powered,lift-powered,Courtyard 1F,Courtyard 1F,guide gate,Lift; dead until the Battery is fitted in the Falls Area
+falls-area,mining-area,waterfall-stopped,,Courtyard 1F,Courtyard B1,guide gate,Behind the waterfall; refill the reservoir to stop it
+falls-area,water-pool,pool-drained,pool-drained,Courtyard 1F,Courtyard 1F,guide gate,"Path across the reservoir floor, once it is drained with the Square Crank"
+falls-area,zigzag-path,,,Courtyard 1F,Courtyard 1F,evil resource,
+forest-pathway,small-headstone-area,,,Courtyard 1F,Courtyard 1F,evil resource,
+forked-passage,generator-room,,,Courtyard B1,Courtyard B1,evil resource,
+forked-passage,mining-area,,,Courtyard B1,Courtyard B1,evil resource,
+fountain,jessicas-tomb,,lisa-defeated,Courtyard 1F,Altar B2,guide gate,Lift up to the courtyard fountain after the fight with Lisa
+fountain,laboratory-entrance,medal-eagle & medal-wolf,medal-eagle & medal-wolf,Courtyard 1F,Laboratory B1,evil resource,
+gallery,plant-42-room,@other,plant42-dead,Residence 1F,Residence 1F,guide gate,
+gallery,residence-medical-room,medical-code,,Residence 1F,Residence 1F,guide gate,Keypad: lamp colours and pool-ball numbers from the Rec Room
+gallery,room-003,key-003,key-003,Residence 1F,Residence 1F,evil resource,
+garbage-compactor-room,generator-room,cave-elevator,cave-elevator,Courtyard B2,Courtyard B1,guide gate,Mining lift; powered by the Cylinder Shaft
+garbage-compactor-room,winding-underground-passage,,,Courtyard B2,Courtyard B2,evil resource,
+garden-shed,main-garden,,,Mansion 1F,Courtyard 1F,evil resource,
+garden-shed,muddy-path,,,Mansion 1F,Courtyard 1F,evil resource,
+garden-shed,roofed-passage,stone-metal-1,stone-metal-1,Mansion 1F,Mansion 1F,evil resource,
+graveyard,large-gallery,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,Mansion 1F,Mansion 1F,evil resource,
+graveyard,main-hall,,,Mansion 1F,Mansion 1F,evil resource,
+greenhouse,northern-corridor,,,Mansion 1F,Mansion 1F,evil resource,
+item-box-room,laboratory-entrance,,,Laboratory B2,Laboratory B1,evil resource,
+item-box-room,laboratory-stairway,,,Laboratory B2,Laboratory B2,evil resource,
+jessicas-tomb,stairway-passage,,,Altar B1,Altar B1,guide gate,
+kitchen,tea-room,sword-key,sword-key,Mansion B1,Mansion B1,evil resource,
+l-corridor,winding-corridor,,,Mansion 1F,Mansion 1F,evil resource,
+laboratory-entrance,passage-to-heliport,tyrant-defeated,,Laboratory B1,Laboratory B1,guide gate,Emergency exit; opens after the Tyrant
+laboratory-stairway,o-room,,,Laboratory B3,Laboratory B3,evil resource,
+laboratory-stairway,visual-data-room,lab-computer,,Laboratory B2,Laboratory B2,guide gate,Electronic lock: JOHN / ADA / CELL at the lab computer
+landing-point,passage-to-heliport,fuse-unit,fuse-unit,Heliport,Laboratory B1,guide gate,Lift needs the Fuse Unit
+large-art-room,main-hall,helmet-key,helmet-key,Mansion 1F,Mansion 1F,evil resource,
+large-art-room,mirror-room,,,Mansion 1F,Mansion 1F,evil resource,
+lisas-room,winding-underground-passage,,flamethrower-hooks,Courtyard B2,Courtyard B2,guide gate,Hooks; weigh them down with the Broken Flamethrower
+living-room,marble-room,,,Mansion 1F,Mansion 1F,evil resource,
+main-garden,water-pool,,,Courtyard 1F,Courtyard 1F,evil resource,
+main-hall,outside-balcony,@other,,Mansion 2F,Mansion 2F,evil resource,
+main-hall,outside-patio,,,Mansion 2F,Mansion 2F,evil resource,
+main-hall,stairway-passage,stone-metal-1 & stone-metal-2,stone-metal-1 & stone-metal-2,Mansion 1F,Altar B1,evil resource,
+main-laboratory,main-laboratory-entrance,,,Laboratory B4,Laboratory B4,evil resource,
+mansion-drug-room,west-wing-inner-stairway,,,Mansion 1F,Mansion 1F,evil resource,
+marble-room,winding-corridor,,,Mansion 1F,Mansion 1F,evil resource,
+mirror-corridor,west-wing-inner-stairway,@other,,Mansion 2F,Mansion 2F,evil resource,
+mirror-corridor,west-wing-outer-stairway,,,Mansion 2F,Mansion 2F,evil resource,
+morgue,o-room,power-key,power-key,Laboratory B3,Laboratory B3,evil resource,
+morgue,surgeons-room,,,Laboratory B3,Laboratory B3,evil resource,
+muddy-path,small-headstone-area,weathervanes,,Courtyard 1F,Courtyard 1F,guide gate,"Gate opens when both weathervanes are set (red west, blue north)"
+northern-corridor,researchers-bedroom,,,Mansion 1F,Mansion 1F,evil resource,
+northern-corridor,tea-room,,@other,Mansion 1F,Mansion 1F,evil resource,
+northern-corridor,tiger-statue-room,,,Mansion 1F,Mansion 1F,evil resource,
+northern-corridor,west-wing-inner-stairway,armor-key,armor-key,Mansion 1F,Mansion 1F,evil resource,
+o-room,operating-room,,,Laboratory B3,Laboratory B3,evil resource,
+o-room,pass-code-corridor,,,Laboratory B3,Laboratory B3,evil resource,
+outside-balcony,west-wing-inner-stairway,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,Mansion 2F,Mansion 2F,evil resource,
+outside-boiler,winding-corridor,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,Mansion 1F,Mansion 1F,evil resource,
+pass-code-corridor,x-ray-room-a,,,Laboratory B3,Laboratory B3,evil resource,
+pass-code-corridor,x-ray-room-b,lab-computer,,Laboratory B3,Laboratory B3,guide gate,
+plant-42-room,room-003,,red-book-shelf,Residence 1F,Residence 1F,guide gate,Bookcase opens when the red books form the picture
+power-control-room,power-maze-b,,,Laboratory B3,Laboratory B3,evil resource,
+power-maze-a,power-maze-b,,,Laboratory B3,Laboratory B3,evil resource,
+resting-room,sliding-trap-room,helmet-key,helmet-key,Mansion 2F,Mansion 2F,evil resource,
+room-001,room-001-bathroom,,,Residence 1F,Residence 1F,evil resource,
+room-002,room-002-bathroom,,,Residence 1F,Residence 1F,evil resource,
+room-003,room-003-bathroom,,,Residence 1F,Residence 1F,evil resource,
+secret-passage,sliding-trap-room,,crusher-statue,Mansion 1F,Mansion 2F,guide gate,Hole behind the statue puzzle in the crushing-wall room
+small-storeroom,west-wing-inner-stairway,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,lockpick | old-key-kitchen | old-key-bathroom | old-key-storeroom | old-key-researchers | old-key-bedroom,Mansion 1F,Mansion 1F,evil resource,
+spider-room,straight-passage,,,Courtyard B1,Courtyard B1,evil resource,
+tea-room,west-wing-outer-stairway,,,Mansion 1F,Mansion 1F,evil resource,
+trophy-room,west-wing-inner-stairway,helmet-key,helmet-key,Mansion 2F,Mansion 2F,evil resource,
+underground-storage-room,winding-underground-passage,,,Courtyard B2,Courtyard B2,evil resource,

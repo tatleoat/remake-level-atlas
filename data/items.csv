@@ -1,0 +1,95 @@
+id,name,kind,group,room,characters,needs,note
+lockpick,Lock Pick,key,keys,main-hall,jill,,Barry hands it over in the Main Hall
+old-key-storeroom,Old Key (East Wing Storeroom),key,keys,east-wing-storeroom,chris,,Each Old Key opens one simple lock; this model lets any of them open any such door
+old-key-bathroom,Old Key (Bathroom),key,keys,bathroom,chris,,In the bathtub once it is drained
+old-key-kitchen,Old Key (Kitchen),key,keys,kitchen,chris,,
+old-key-researchers,Old Key (Researcher's Bedroom),key,keys,researchers-bedroom,chris,,In the wardrobe
+old-key-bedroom,Old Key (Bedroom),key,keys,bedroom,chris,,
+sword-key,Sword Key,key,keys,crypt,jill+chris,,On the back of the Book of Curses
+armor-key,Armor Key,key,keys,death-passage,jill+chris,imitation-key,Swap it for the Imitation of a key or the blade trap fires
+shield-key,Shield Key,key,keys,dining-room,jill+chris,gold-emblem,Gold Emblem over the fireplace opens the clock; set it to six
+helmet-key,Helmet Key,key,keys,plant-42-room,jill+chris,plant42-dead,In the fireplace once Plant 42 is dead
+emblem-key,Emblem Key,key,keys,mirror-room,jill+chris,red-gem,Red Gemstone opens Jewelry Box 2; the Broach turns into the key
+key-001,Key for Room 001,key,keys,room-002-bathroom,jill+chris,,
+key-003,Key for Room 003,key,keys,gallery,jill+chris,bees-smoked,Under the hive; smoke the bees first
+control-key,Control Room Key,key,keys,room-001-bathroom,jill+chris,,In the bathtub; drain it
+gallery-key,Gallery Key,key,keys,aqua-ring-water-tank,jill+chris,,The shark knocks it into the water; electrify the pool
+power-key,Key for the Power Area,key,keys,visual-data-room,jill+chris,slide-filter,Slide Filter in the projector shows the code 8462 for the hidden room
+closet-key,Closet Key,key,keys,(combine),jill+chris,escape,Reward for finishing the game; opens the costume closet
+lighter,Lighter,item,mansion,small-library,jill,,Chris starts with one
+arrowhead,Golden Arrow / Arrowhead,item,mansion,mirror-corridor,jill+chris,,Examine the Golden Arrow to free the Arrowhead
+dog-whistle,Dog Whistle,item,mansion,small-library,jill+chris,,
+imitation-key,Imitation of a key,item,mansion,outside-balcony,jill+chris,dog-whistle,"Blow the whistle, kill the two Cerberus; Collar > Coin > key"
+herbicide,Herbicide,item,mansion,outside-boiler,jill+chris,,
+mask-eyes,Mask without eyes,item,mansion,greenhouse,jill+chris,herbicide,"Herbicide in the pump, handle to red"
+mask-mouth,Mask without a mouth,item,mansion,large-gallery,jill+chris,,Painting puzzle
+mask-all,"Mask without eyes, nose, or mouth",item,mansion,armor-room,jill+chris,,"Armour vents puzzle, then Jewelry Box 1"
+mask-nose,Mask without a nose,item,mansion,attic,jill+chris,,Yawn's first appearance
+serum,Serum,item,mansion,mansion-drug-room,jill+chris,richard-found,Only on the shelf once Richard needs it
+music-mid,"Music, mid-pages",item,mansion,small-dining-room,jill+chris,lighter,Light the candle to see behind the cupboard
+missing-music,Missing Music,item,mansion,bar,jill+chris,,Behind the bookshelf
+emblem,Wooden Emblem,item,mansion,dining-room,jill+chris,,Above the fireplace
+gold-emblem,Gold Emblem,item,mansion,bar,jill+chris,sonata & emblem,Swap in the Wooden Emblem or the wall closes
+wind-crest,Wind Crest,item,mansion,fish-tank-room,jill+chris,,Bee specimen and lure puzzle
+broken-shotgun,Broken Shotgun,item,mansion,small-storeroom,jill+chris,,Hang it on the hooks in place of the Shotgun
+stone-metal-1,Stone & Metal Object,item,mansion,crypt,jill+chris,mask-eyes & mask-mouth & mask-nose & mask-all,Four death masks on the wall; the coffin falls
+red-gem,Red Gemstone,item,mansion,trophy-room,jill+chris,,"Lights off, dodge the eagle"
+yellow-gem,Yellow Gemstone,item,mansion,trophy-room,jill+chris,,
+metal-object,Metal Object,item,mansion,courtyard-study,jill+chris,,Switch the lamp on first
+medal-eagle,Medal of Eagle,item,mansion,secret-passage,jill+chris,,In Last Book Vol. 1
+medal-wolf,Medal of Wolf,item,mansion,library,jill+chris,,"In Last Book Vol. 2, after Yawn"
+battery,Battery,item,mansion,materials-room,jill+chris,,
+square-crank,Square Crank,item,outside,cabin,jill+chris,,Lisa Trevor's first appearance
+hex-crank,Hexagon Crank,item,outside,enrico-room,jill+chris,,On Enrico's body
+cylinder,Cylinder,item,outside,underground-statue-room,jill+chris,hex-crank,Statue puzzle
+broken-flamethrower,Broken Flamethrower,item,outside,garbage-compactor-room,jill+chris,crate-sent,Crush the crate
+stone-ring,Stone Ring,item,outside,lisas-room,jill+chris,,In Jewelry Box 3
+stone-metal-2,Second Stone & Metal Object,item,outside,(combine),jill+chris,stone-ring & metal-object,Combine the Stone Ring and the Metal Object
+unprinted-book,Unprinted Book,item,guardhouse,rec-room,jill+chris,,
+insecticide,Insecticide Spray,item,guardhouse,gallery,jill+chris,,
+mo-tiger,MO Disk (Tiger Statue),item,lab,tiger-statue-room,jill+chris,yellow-gem,Yellow Gemstone in the tiger's eye
+mo-stairway,MO Disk (Lab Stairway),item,lab,laboratory-stairway,jill+chris,,
+mo-visual,MO Disk (Visual Data Room),item,lab,visual-data-room,jill+chris,,
+slide-filter,Slide Filter,item,lab,x-ray-room-b,jill+chris,,
+capsule-empty,Fuel Supply Capsule,item,lab,power-maze-a,jill+chris,,
+capsule-full,Fuel Supply Capsule (full),item,lab,x-ray-room-b,jill+chris,capsule-empty,Carry it back without taking a hit
+fuse-unit,Fuse Unit,item,lab,passage-to-heliport,jill+chris,,
+signal-rockets,Signal Rockets,item,lab,landing-point,jill+chris,,
+shotgun,Shotgun,weapon,weapons,living-room,jill+chris,jill | broken-shotgun,Ceiling trap: Barry saves Jill; otherwise swap in the Broken Shotgun
+grenade-launcher,Grenade Launcher,weapon,weapons,outside-patio,jill,,Beside Forest's body
+magnum,Magnum Revolver,weapon,weapons,small-headstone-area,jill+chris,wind-crest,"Wind Crest gives the Sun, Moon and Star Crests; they open the left headstone"
+assault-shotgun,Assault Shotgun,weapon,weapons,attic,jill,richard-saved,Richard drops it during the Yawn fight if you saved him
+assault-shotgun-c,Assault Shotgun,weapon,weapons,aqua-ring-water-tank,chris,richard-saved & aqua-drained,"Richard's, after the sharks get him"
+flamethrower,Flamethrower,weapon,weapons,boulder-passage-1,chris,,
+self-defense-gun,Self Defense Gun,weapon,weapons,room-001,jill+chris,,
+richard-found,Find Richard poisoned,event,events,pillar-room,jill+chris,,Optional branch
+richard-saved,Save Richard with the Serum,event,events,pillar-room,jill+chris,serum,Optional; changes who helps with Yawn
+sonata,Play the Moonlight Sonata,event,events,bar,jill+chris,music-mid & missing-music,"Chris has Rebecca play it, after she practises"
+weathervanes,Set the weathervanes,event,events,muddy-path,jill+chris,,"Red west, blue north"
+pool-drained,Drain the reservoir,event,events,water-pool,jill+chris,square-crank,
+crate-bridge,Crate bridge over the vine holes,event,events,entry-corridor,jill+chris,,
+bookcases-002,Move the bookcases in Room 002,event,events,room-002,jill+chris,,Reveals the ladder to the Aqua Ring
+aqua-crates,Float the crates across,event,events,aqua-ring-entry,jill+chris,,
+aqua-drained,Drain the Aqua Ring,event,events,control-room,jill+chris,,"Pressure shield puzzle, on a timer"
+bees-smoked,Smoke out the bees,event,events,central-corridor,jill+chris,insecticide,Spray through the hole behind the Residence map
+medical-code,Open the chemical room keypad,event,events,gallery,jill+chris,,Optional: V-JOLT ingredients
+red-book-shelf,Red book puzzle,event,events,room-003,jill+chris,unprinted-book,
+plant42-dead,Kill Plant 42,event,events,plant-42-room,jill+chris,,Or V-JOLT the roots first
+crusher-statue,Statue puzzle in the crushing room,event,events,sliding-trap-room,jill+chris,,
+kitchen-fuse,Fuse for the kitchen lift,event,events,concrete-passage-2,jill+chris,,
+lift-powered,Fit the Battery to the lift,event,events,falls-area,jill+chris,battery,
+waterfall-stopped,Refill the reservoir,event,events,water-pool,jill+chris,square-crank & lift-powered,The waterfall stops and opens the way to the caves
+cave-elevator,Power the mining lift,event,events,generator-room,jill+chris,cylinder,"Cylinder + Shaft, buttons IV II III I"
+crate-sent,Send the crate down,event,events,underground-storage-room,jill+chris,,
+flamethrower-hooks,Weigh down the hooks,event,events,winding-underground-passage,jill+chris,broken-flamethrower,
+lisa-defeated,Lisa Trevor at the altar,event,events,jessicas-tomb,jill+chris,,Push the four stones
+cell-password,Read the X-ray password,event,events,x-ray-room-a,jill+chris,,CELL
+lab-computer,Log in at the lab computer,event,events,operating-room,jill+chris,cell-password,"JOHN / ADA, then CELL"
+mo-read-fuel,MO Disk reader 1,event,events,x-ray-room-b,jill+chris,mo-tiger | mo-stairway | mo-visual,
+mo-read-storage,MO Disk reader 2,event,events,morgue,jill+chris,mo-tiger | mo-stairway | mo-visual,Through the air ducts
+mo-read-power,MO Disk reader 3,event,events,power-maze-b,jill+chris,mo-tiger | mo-stairway | mo-visual,
+prison-door,Open the prison door,event,events,pass-code-corridor,jill+chris,mo-read-fuel & mo-read-storage & mo-read-power & mo-tiger & mo-stairway & mo-visual,All three disks read
+lab-elevator,Power the main elevator,event,events,power-control-room,jill+chris,capsule-full,
+tyrant-defeated,Tyrant in the Main Laboratory,event,events,main-laboratory,jill+chris,,
+partner-rescued,Free your partner,event,events,cell,jill+chris,,Best ending
+escape,Signal Brad and escape,event,events,landing-point,jill+chris,signal-rockets & tyrant-defeated,End of the game

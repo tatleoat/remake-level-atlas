@@ -1,0 +1,1868 @@
+<title>REmake Level Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Libre+Baskerville:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=VT323&display=swap">
+<style>
+/* Layout: one-screen instrument. Map on the left (floor tabs above it), case-file side panel on the right; stacks on phones.
+   Single dark theme on purpose: it mirrors the game's own map screen. */
+:root {
+  color-scheme: dark;
+  --ink: #0a0e13;        /* page */
+  --panel: #10161e;      /* side panel */
+  --raise: #17202b;      /* controls, cards */
+  --line: #253140;       /* hairlines */
+  --text: #d8dee7;
+  --muted: #8593a6;
+  --room: #1a2633;       /* room never reachable in this state */
+  --room-line: #3b4b5e;
+  --reach: #2c6683;      /* reachable now (the game's map blue) */
+  --reach-hi: #3f87ab;
+  --seen: #4d93b5;       /* visited this run */
+  --locked: #3a1c22;     /* behind a lock */
+  --amber: #e8a33d;      /* you, the route, the selection */
+  --amber-dim: #8a6226;
+  --herb: #6fae5f;       /* save rooms, good */
+  --blood: #d0574f;      /* locks, danger */
+  --violet: #9b84d6;     /* event and puzzle gates */
+  --door: #d6a84c;       /* door marks, gold as on the game's map */
+  --hatch: #5d6f83;      /* stair hatching */
+  --raised: rgba(4, 8, 12, .38); /* raised floor and landings */
+  --display: "Special Elite", "Courier New", monospace;
+  --ui: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --lcd: var(--mono);    /* big numbers */
+  --route: var(--amber); /* route lines */
+  --ramp: #16202b, #1d3a4f, #22607a, #3f8f9a, #b9a45a, #e8a33d, #f6d9a8; /* metric colouring, low to high */
+  --mapbg: radial-gradient(ellipse at 50% 40%, #0f1620 0%, var(--ink) 75%);
+}
+html, body { height: 100%; }
+body { background: var(--ink); color: var(--text); font: 14px/1.45 var(--ui); margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--ink); }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); box-sizing: border-box; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 10px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: baseline; gap: 12px; margin-right: auto; min-width: 0; }
+.brand h1 { font: 400 22px/1 var(--display); letter-spacing: .02em; margin: 0; text-wrap: balance; }
+.brand small { color: var(--muted); font-size: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 5px 11px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--raise); color: var(--text); box-shadow: inset 0 -2px 0 var(--amber); }
+.ctl { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+select { background: var(--raise); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; min-height: 0; padding-block: 12px; }
+.mapcol { display: grid; grid-template-rows: auto auto 1fr; gap: 8px; min-height: 0; min-width: 0; }
+.floors { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.fgroup { display: inline-flex; align-items: center; gap: 4px; }
+.fgroup > span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-right: 2px; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 3px; padding: 2px 7px; font: 500 12px/1.4 var(--mono); color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.chip .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); margin-left: 4px; vertical-align: 1px; }
+.maptools { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.toggle { display: inline-flex; gap: 5px; align-items: center; font-size: 12px; color: var(--muted); }
+.toggle input { accent-color: var(--amber); }
+.zoom { margin-left: auto; display: inline-flex; gap: 4px; }
+.zoom button { width: 28px; height: 26px; border: 1px solid var(--line); background: var(--raise); border-radius: 3px; }
+.mapwrap { position: relative; min-height: 0; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--mapbg); }
+#map { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; }
+#map.dragging { cursor: grabbing; }
+.legend { position: absolute; left: 10px; bottom: 10px; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line);
+  border-radius: 3px; padding: 6px 9px; font-size: 11px; color: var(--muted); display: grid; gap: 3px; max-width: calc(100% - 20px); }
+.legend .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.sw { display: inline-block; width: 12px; height: 10px; border: 1px solid var(--room-line); vertical-align: -1px; margin-right: 4px; }
+.ramp { display: inline-block; width: 120px; height: 8px; border-radius: 2px; vertical-align: 0; margin: 0 6px; }
+.tip { position: absolute; pointer-events: none; background: var(--raise); border: 1px solid var(--line); border-radius: 3px; padding: 4px 8px; font-size: 12px; max-width: 260px; z-index: 3; }
+.floorname { position: absolute; right: 12px; top: 8px; font: 400 18px var(--display); color: var(--muted); pointer-events: none; }
+
+/* map marks */
+.room { stroke: var(--room-line); stroke-width: .7; vector-effect: non-scaling-stroke; transition: fill .25s; }
+.room:hover { stroke: var(--text); }
+.room.sel { stroke: var(--amber); stroke-width: 2.2; }
+.room.pos { stroke: var(--amber); stroke-width: 1.6; }
+.lbl { fill: var(--text); font-family: var(--ui); paint-order: stroke; stroke: rgba(6, 9, 13, .85); stroke-width: 2.2px; stroke-linejoin: round; pointer-events: none; }
+.lbl.dim { fill: var(--muted); }
+.dbar { stroke: var(--ink); stroke-width: .5; vector-effect: non-scaling-stroke; }
+.dbar.open { fill: var(--door); }
+.dbar.key { fill: var(--blood); }
+.dbar.event { fill: var(--violet); }
+.dbar.bolt { fill: var(--door); stroke: var(--blood); stroke-width: 1.6; stroke-dasharray: 2 1.2; }
+.dbar.sealed { fill: #4b5664; }
+.opening { fill: none; stroke: #a9bccf; stroke-width: 1.1; stroke-dasharray: 1.6 1.2; vector-effect: non-scaling-stroke; }
+.opening.key { stroke: var(--blood); } .opening.event { stroke: var(--violet); }
+.hatch { fill: var(--hatch); pointer-events: none; }
+.raised { fill: var(--raised); pointer-events: none; }
+.xtag { cursor: pointer; }
+.xlink { fill: var(--raise); stroke: var(--door); stroke-width: .8; vector-effect: non-scaling-stroke; }
+.xtag:hover .xlink, .xtag:focus-visible .xlink { fill: #24313f; stroke-width: 2; }
+.xtag:focus-visible { outline: none; }
+.xglyph { fill: var(--door); } .xglyph.key { fill: var(--blood); } .xglyph.event { fill: var(--violet); }
+.xglyph-ink { fill: none; stroke: var(--ink); stroke-width: .75; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.arrive { fill: none; stroke: var(--amber); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; animation: arrive 1.2s ease-out 3; transform-box: fill-box; transform-origin: center; opacity: 0; }
+@keyframes arrive { from { opacity: 1; transform: scale(.4); } to { opacity: 0; transform: scale(1.8); } }
+.xlink.key { stroke: var(--blood); } .xlink.event { stroke: var(--violet); } .xlink.bolt { stroke: var(--blood); stroke-dasharray: 2 1.2; }
+.xtxt { fill: var(--text); font: 500 4.6px var(--mono); pointer-events: none; }
+.ico { cursor: pointer; }
+.ico .ibg { fill: #000; }
+.ico .ibd { fill: none; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.iglyph { fill: none; stroke-width: .9; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.ico:hover .ibd { stroke-width: 2.6; }
+.ico.got { opacity: .3; }
+.icnt { fill: #fff; font-family: var(--mono); font-weight: 600; paint-order: stroke; stroke: #000; stroke-width: 1.8px; stroke-linejoin: round; pointer-events: none; }
+.imore rect { fill: var(--raise); stroke: var(--muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.imore text { fill: var(--text); font-family: var(--mono); pointer-events: none; }
+.legend .ichips { gap: 3px 4px; }
+.lchip { display: inline-flex; align-items: center; gap: 4px; background: transparent; border: 1px solid transparent; border-radius: 3px; padding: 1px 5px 1px 3px; font-size: 11px; color: var(--text); }
+.lchip[aria-pressed="false"] { color: var(--muted); opacity: .55; }
+.lchip[aria-pressed="false"] .isw { background: transparent; }
+.lchip:hover { border-color: var(--line); }
+.isw { display: inline-block; width: 10px; height: 10px; background: #000; border: 2px solid; border-radius: 2px; box-sizing: border-box; }
+.isw.round { border-radius: 50%; }
+.route { fill: none; stroke: var(--route); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; opacity: .9; pointer-events: none; }
+.route.alt1 { stroke: #7fc6e6; stroke-dasharray: 5 3; }
+.route.alt2 { stroke: #c58fd8; stroke-dasharray: 2 3; }
+.route.leg { stroke-width: 3.2; }
+.route.past { opacity: .35; }
+.route.walked { opacity: .55; }
+.route.ahead { stroke: #8da2b8; stroke-width: 1.2; opacity: .5; }
+.route.way { stroke-width: 1.6; stroke-dasharray: 4 3; opacity: .9; }
+.rarrow { fill: var(--route); stroke: var(--ink); stroke-width: .5; vector-effect: non-scaling-stroke; pointer-events: none; }
+.room.off { fill-opacity: .25; }
+.room.side { fill-opacity: .55; }
+.room.on { stroke: #f0c987; stroke-width: 1.3; }
+.room.cur { stroke: var(--amber); stroke-width: 2.8; }
+.curfill { fill: var(--amber); opacity: .16; pointer-events: none; }
+.walker { fill: #fff; stroke: var(--amber); stroke-width: 2.2; vector-effect: non-scaling-stroke; pointer-events: none; }
+.xcurve { fill: none; stroke: #5d7086; stroke-width: .8; vector-effect: non-scaling-stroke; opacity: .55; pointer-events: none; }
+.xcurve.route { stroke: var(--route); opacity: .9; stroke-width: 1.6; }
+.me { fill: var(--amber); stroke: var(--ink); stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
+.me-ring { fill: none; stroke: var(--amber); vector-effect: non-scaling-stroke; pointer-events: none; animation: ring 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes ring { from { opacity: .9; transform: scale(.6); } to { opacity: 0; transform: scale(2.4); } }
+@media (prefers-reduced-motion: reduce) { .me-ring { animation: none; opacity: .6; } .arrive { animation: none; opacity: .8; } .room { transition: none; } }
+.ftitle { fill: var(--muted); font: 400 14px var(--display); }
+.fframe { fill: none; stroke: var(--line); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+
+/* side panel */
+.side { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; display: grid; grid-template-rows: auto 1fr; min-height: 0; min-width: 0; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; background: transparent; border: 0; padding: 9px 4px; color: var(--muted); font-weight: 500; border-bottom: 2px solid transparent; }
+.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--amber); }
+.pane { overflow: auto; padding: 12px 14px 18px; min-height: 0; }
+.pane h2 { font: 400 17px/1.2 var(--display); margin: 0 0 6px; text-wrap: balance; }
+.pane h3 { font: 600 11px/1.3 var(--ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 6px; }
+.pane p { margin: 0 0 8px; }
+.note { color: var(--muted); font-size: 12px; }
+.sub { color: var(--muted); font-size: 12px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 4px; }
+.stat { background: var(--raise); border-radius: 3px; padding: 6px 8px; }
+.stat b { display: block; font: 500 18px/1.1 var(--lcd); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 11px; color: var(--muted); }
+ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+ul.list li { display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 3px; }
+ul.list li.click { cursor: pointer; }
+ul.list li.click:hover, ul.list li.on { background: var(--raise); }
+.tag { font: 500 10.5px/1.5 var(--mono); padding: 0 5px; border-radius: 2px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.ok { color: var(--herb); border-color: color-mix(in srgb, var(--herb) 50%, var(--line)); }
+.tag.bad { color: var(--blood); border-color: color-mix(in srgb, var(--blood) 50%, var(--line)); }
+.tag.ev { color: var(--violet); border-color: color-mix(in srgb, var(--violet) 50%, var(--line)); }
+.tag.am { color: var(--amber); border-color: var(--amber-dim); }
+.grow { flex: 1; min-width: 0; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.btn { background: var(--raise); border: 1px solid var(--line); border-radius: 3px; padding: 5px 10px; }
+.btn.primary { border-color: var(--amber-dim); color: var(--amber); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.inv { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; }
+.inv label { display: flex; gap: 6px; align-items: baseline; font-size: 12.5px; padding: 2px 0; cursor: pointer; min-width: 0; }
+.inv label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inv input { accent-color: var(--amber); }
+.inv label.na { opacity: .35; }
+.steps { counter-reset: s; }
+.stepper { position: sticky; top: -12px; z-index: 2; background: var(--panel); margin: -12px -14px 10px; padding: 10px 14px 6px; border-bottom: 1px solid var(--line); }
+.stepper .btnrow { margin: 0 0 6px; align-items: center; }
+.stepper input[type=range] { width: 100%; accent-color: var(--amber); margin: 0 0 4px; }
+.stepper p { margin: 0 0 4px; }
+.ways { display: grid; gap: 4px; margin-bottom: 6px; }
+.legline { display: flex; flex-wrap: wrap; gap: 3px 2px; align-items: center; margin: 2px 0 4px; }
+.lstop { background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; font-size: 11.5px; line-height: 1.6; color: var(--text); }
+.lstop:hover { border-color: var(--muted); }
+.lstop.done { color: var(--muted); }
+.lstop.now { border-color: var(--amber); color: var(--amber); background: var(--raise); }
+.lstop.goal { font-weight: 600; }
+.legline .arr { color: var(--muted); font-size: 11px; padding: 0 1px; }
+.stepper .toggles { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.way { display: flex; gap: 8px; align-items: flex-start; text-align: left; background: transparent; border: 1px solid var(--line); border-radius: 3px; padding: 5px 8px; }
+.way[aria-pressed="true"] { border-color: var(--amber); background: var(--raise); }
+.way i { width: 16px; height: 4px; border-radius: 2px; margin-top: 8px; flex: none; }
+.steps li { align-items: flex-start !important; }
+.steps .n { font: 500 11px/1.9 var(--mono); color: var(--muted); min-width: 22px; text-align: right; }
+.strip { display: flex; height: 14px; border-radius: 2px; overflow: hidden; margin: 6px 0 2px; }
+.strip i { display: block; height: 100%; }
+table.t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.t th { text-align: left; font-weight: 500; color: var(--muted); border-bottom: 1px solid var(--line); padding: 4px 4px; cursor: pointer; white-space: nowrap; position: sticky; top: 0; background: var(--panel); }
+table.t td { padding: 3px 4px; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
+table.t td.num, table.t th.num { text-align: right; }
+table.t tr.click { cursor: pointer; }
+table.t tr.click:hover, table.t tr.on { background: var(--raise); }
+.tablebox { max-height: 360px; overflow: auto; border: 1px solid var(--line); border-radius: 3px; }
+.bar { height: 6px; background: var(--amber-dim); border-radius: 1px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12.5px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.content-item { padding: 5px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); font-size: 12.5px; }
+.content-item b { font-weight: 600; }
+.credit { margin-top: 18px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+.credit a { color: var(--muted); }
+.warn { color: var(--blood); }
+
+.bgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 4px; margin: 4px 0 6px; }
+.bgcell { aspect-ratio: var(--ar); background-color: #000; background-repeat: no-repeat; border-radius: 2px; border: 1px solid var(--line); padding: 0; cursor: zoom-in; display: block; width: 100%; }
+.bgcell:hover, .bgcell:focus-visible { border-color: var(--amber); }
+.thumb { width: 54px; aspect-ratio: 5 / 4; flex: none; border-radius: 2px; background-repeat: no-repeat; background-color: #000; border: 1px solid var(--line); }
+.thumb.lg { width: 84px; }
+.thumb.cat { border-width: 2px; }
+.ci { display: flex; gap: 8px; align-items: flex-start; }
+.tipimg { width: 220px; max-width: 100%; aspect-ratio: var(--ar); background-repeat: no-repeat; margin-top: 5px; border-radius: 2px; }
+.lb { position: fixed; inset: 0; z-index: 30; background: rgba(3, 5, 8, .94); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.lb .stage { display: flex; align-items: center; justify-content: center; min-height: 0; }
+.lb .pic { width: min(100%, calc((100vh - 150px) * var(--arn))); aspect-ratio: var(--ar); background-repeat: no-repeat; }
+.lb .bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; height: auto; background: none; }
+.lb .bar h2 { font: 400 18px var(--display); margin: 0; }
+.lb .strip { display: flex; gap: 4px; overflow-x: auto; height: auto; padding-bottom: 4px; }
+.lb .strip button { width: 72px; flex: none; }
+.lb .strip button.on { border-color: var(--amber); }
+.modal { position: fixed; inset: 0; z-index: 35; background: rgba(2, 3, 4, .78); display: grid; place-items: center; padding: 16px; }
+.modal .abox { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 14px 18px 18px; }
+.modal .mbar { display: flex; align-items: center; gap: 10px; }
+.modal h2 { font: 400 20px var(--display); margin: 0; }
+.modal h3 { font: 600 11px/1.3 var(--ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 4px; }
+.modal code { font: 12px var(--mono); background: var(--raise); padding: 0 4px; border-radius: 2px; overflow-wrap: anywhere; }
+.aprog { margin-top: 14px; display: grid; gap: 6px; }
+.aprog progress { width: 100%; accent-color: var(--amber); }
+.galrow { display: grid; grid-template-columns: minmax(0, 1fr) 96px 96px; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); }
+.galrow .empty { aspect-ratio: 4 / 3; border: 1px dashed var(--line); border-radius: 2px; display: grid; place-items: center; font-size: 10px; color: var(--muted); }
+/* ---------- skins ----------
+   RE2 (PlayStation, 1998): colours sampled from the game's own status-screen textures (COMMON/DATA/ST0.TIM, SELECT_W.TIM,
+   CONFIG.TIM on the Leon disc): brushed gunmetal plates, green ECG/LCD screens, navy fields, pale green-white serif caps.
+   REmake (GameCube, 2002): sampled from the HD Remaster's status, file and map screens (id/e_rom/subscr/*.arc): green-black
+   gunmetal, olive-tan file paper, bone text, amber labels, copper wall lines on the map, serif type, grain and vignette. */
+:root[data-skin="re2"] {
+  --ink: #040605; --panel: #2c302d; --raise: #3c413c; --line: #121513; --text: #dce8dc; --muted: #99a097;
+  --room: #11142a; --room-line: #8193c9; --reach: #2845a6; --reach-hi: #3a5cc8; --seen: #5b7bd8; --locked: #4c1418;
+  --amber: #5be35b; --amber-dim: #2c7a2c; --herb: #5be35b; --blood: #e5483f; --violet: #b45fdc; --door: #e8e8e8; --hatch: #6f7b96;
+  --display: "Libre Baskerville", Georgia, "Times New Roman", serif; --lcd: "VT323", "IBM Plex Mono", monospace;
+  --ramp: #0b1530, #13306b, #1f4fae, #3d7bd8, #6fd06f, #bdf06a, #f0ffd0;
+  --mapbg: linear-gradient(rgba(80, 220, 80, .06) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, rgba(80, 220, 80, .06) 1px, transparent 1px) 0 0 / 24px 24px, #010201;
+}
+:root[data-skin="re2"] body { background: #040605; }
+:root[data-skin="re2"] body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 40; background: repeating-linear-gradient(rgba(0, 0, 0, .1) 0 1px, transparent 1px 3px); }
+:root[data-skin="re2"] .top, :root[data-skin="re2"] .side { background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 3px), linear-gradient(#3e433e, #262a27);
+  border: 2px solid #0c0e0d; box-shadow: inset 0 1px #7c817b, inset 0 -1px #000; }
+:root[data-skin="re2"] .top { border-width: 0 0 2px; padding-inline: 12px; margin-inline: -16px; }
+:root[data-skin="re2"] .brand h1 { font: 700 21px/1 var(--display); text-transform: uppercase; letter-spacing: .1em; color: #dce8dc; text-shadow: 0 1px 0 #000, 0 0 10px rgba(91, 227, 91, .25); }
+:root[data-skin="re2"] .pane h2, :root[data-skin="re2"] .lb .bar h2 { font: 700 15px/1.3 var(--display); text-transform: uppercase; letter-spacing: .06em; }
+:root[data-skin="re2"] .pane h3 { color: #7fb87f; }
+:root[data-skin="re2"] .tabs { background: #1a1d1b; border-bottom: 2px solid #0c0e0d; }
+:root[data-skin="re2"] .tabs button { font: 700 10.5px var(--display); text-transform: uppercase; letter-spacing: .04em; color: #8a9289; padding-inline: 2px; }
+:root[data-skin="re2"] .tabs button[aria-selected="true"] { color: var(--amber); text-shadow: 0 0 8px rgba(91, 227, 91, .6); background: #0a1a0a; }
+:root[data-skin="re2"] .btn, :root[data-skin="re2"] .zoom button, :root[data-skin="re2"] select, :root[data-skin="re2"] .seg button, :root[data-skin="re2"] .chip {
+  background: linear-gradient(#5a5f59, #343835); border: 1px solid #0c0e0d; box-shadow: inset 0 1px #9aa098; color: #eef4ee; text-shadow: 0 1px #000; border-radius: 2px; }
+:root[data-skin="re2"] .seg { border-color: #0c0e0d; }
+:root[data-skin="re2"] .seg button[aria-pressed="true"], :root[data-skin="re2"] .chip[aria-pressed="true"] { background: #0a1a0a; color: var(--amber); box-shadow: inset 0 0 0 1px #1f5a1f, 0 0 6px rgba(91, 227, 91, .3); text-shadow: 0 0 6px rgba(91, 227, 91, .6); }
+:root[data-skin="re2"] .btn.primary { color: var(--amber); }
+:root[data-skin="re2"] .stat { background: #041304; border: 1px solid #000; box-shadow: inset 0 0 0 1px #183117, inset 0 0 14px rgba(0, 0, 0, .9); border-radius: 2px; }
+:root[data-skin="re2"] .stat b { font-size: 26px; color: #6af06a; text-shadow: 0 0 6px rgba(80, 240, 80, .55); }
+:root[data-skin="re2"] .stat span { color: #5f945f; }
+:root[data-skin="re2"] .mapwrap { border: 2px solid #0c0e0d; box-shadow: inset 0 0 0 1px #3c413c; border-radius: 2px; }
+:root[data-skin="re2"] .legend, :root[data-skin="re2"] .tip { background: rgba(6, 10, 7, .92); border-color: #3c413c; }
+:root[data-skin="re2"] .stepper { background: linear-gradient(#3e433e, #2c302d); }
+:root[data-skin="re2"] .floorname { font: 700 15px var(--display); text-transform: uppercase; letter-spacing: .1em; color: #7fb87f; }
+
+:root[data-skin="remake"] {
+  --ink: #090a06; --panel: #17170f; --raise: #29271b; --line: #463e27; --text: #eee5c9; --muted: #b0a47e;
+  --room: #1d1c15; --room-line: #a0733f; --reach: #5d553a; --reach-hi: #756a4a; --seen: #857a52; --locked: #3e1d16; --route: #c8341f;
+  --amber: #e5ba68; --amber-dim: #8a6a34; --herb: #9bb562; --blood: #c8492f; --violet: #a184c8; --door: #d9b46c; --hatch: #8f7f5b;
+  --display: "EB Garamond", Garamond, Georgia, serif; --ui: "EB Garamond", Garamond, Georgia, serif; --lcd: "EB Garamond", Georgia, serif;
+  --ramp: #1d1c15, #3b3523, #5e5236, #857650, #b0965c, #d9b46a, #f2e2b4;
+  --mapbg: radial-gradient(ellipse at 50% 45%, #211c12 0%, #0d0b07 65%, #050402 100%);
+}
+:root[data-skin="remake"] body { background: #090a06; font-size: 15.5px; }
+:root[data-skin="remake"] body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 40; opacity: .09; mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+:root[data-skin="remake"] .top { background: linear-gradient(#1c1e14, #0e100a); border-bottom: 1px solid #000; box-shadow: inset 0 -1px #5e4b2a; padding-inline: 12px; margin-inline: -16px; }
+:root[data-skin="remake"] .brand h1 { font: 600 25px/1 var(--display); letter-spacing: .03em; color: #eee5c9; text-shadow: 0 2px 6px #000; }
+:root[data-skin="remake"] .side { background: radial-gradient(ellipse at 50% 20%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, .5) 100%), repeating-linear-gradient(transparent 0 27px, rgba(24, 20, 8, .32) 27px 28px), #4b462d;
+  border: 1px solid #12110a; box-shadow: inset 0 0 0 1px #6b5c37, 0 12px 30px rgba(0, 0, 0, .65); }
+:root[data-skin="remake"] .pane { color: #f3ead0; }
+:root[data-skin="remake"] .pane .sub, :root[data-skin="remake"] .pane .note { color: #d3c69c; }
+:root[data-skin="remake"] .pane h2 { font: 600 21px/1.15 var(--display); text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+:root[data-skin="remake"] .pane h3 { font: 600 12px/1.3 var(--display); letter-spacing: .14em; color: #e5ba68; }
+:root[data-skin="remake"] .tabs { background: #101109; border-bottom: 1px solid #000; }
+:root[data-skin="remake"] .tabs button { font: 500 16px var(--display); color: #a99d76; }
+:root[data-skin="remake"] .tabs button[aria-selected="true"] { color: #f3ead0; background: #4b462d; border-bottom-color: transparent; box-shadow: inset 0 2px #a0733f; }
+:root[data-skin="remake"] .btn, :root[data-skin="remake"] .zoom button, :root[data-skin="remake"] select, :root[data-skin="remake"] .seg button, :root[data-skin="remake"] .chip {
+  background: linear-gradient(#2f2d1f, #1a190f); border: 1px solid #5e4b2a; color: #eee5c9; border-radius: 2px; box-shadow: inset 0 1px rgba(255, 240, 200, .08); }
+:root[data-skin="remake"] .seg { border-color: #5e4b2a; }
+:root[data-skin="remake"] .seg button[aria-pressed="true"], :root[data-skin="remake"] .chip[aria-pressed="true"] { background: #4b462d; color: #f3ead0; box-shadow: inset 0 -2px #a0733f; }
+:root[data-skin="remake"] .btn.primary { border-color: #a0733f; color: #e5ba68; }
+:root[data-skin="remake"] .stat { background: rgba(14, 12, 5, .45); border: 1px solid rgba(0, 0, 0, .45); box-shadow: inset 0 1px rgba(255, 240, 200, .06); }
+:root[data-skin="remake"] .stat b { font-size: 24px; font-weight: 500; color: #f3ead0; font-variant-numeric: lining-nums tabular-nums; }
+:root[data-skin="remake"] .stat span { color: #cdbf93; }
+:root[data-skin="remake"] .mapwrap { border: 1px solid #2b2617; box-shadow: 0 0 0 1px #000; }
+:root[data-skin="remake"] .mapwrap::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 140px rgba(0, 0, 0, .85); }
+:root[data-skin="remake"] .legend, :root[data-skin="remake"] .tip { background: rgba(22, 20, 11, .93); border-color: #5e4b2a; }
+:root[data-skin="remake"] .stepper { background: #4b462d; border-bottom-color: rgba(0, 0, 0, .4); }
+:root[data-skin="remake"] .floorname { font: italic 400 22px var(--display); color: #c9b98b; }
+:root[data-skin="remake"] .lbl { stroke: rgba(10, 8, 3, .9); }
+:root[data-skin="remake"] .route { filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, .9)); }
+:root[data-skin="remake"] .ftitle { font: 500 16px var(--display); fill: #b0a47e; }
+:root[data-skin="remake"] ul.list li.click:hover, :root[data-skin="remake"] ul.list li.on { background: rgba(14, 12, 5, .4); }
+:root[data-skin="remake"] table.t th { background: #3e3a25; }
+:root[data-skin="remake"] .way[aria-pressed="true"], :root[data-skin="remake"] .lstop.now { background: rgba(14, 12, 5, .45); }
+
+@media (max-width: 900px) {
+  .app { height: auto; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .mapcol { grid-template-rows: auto auto 62vh; }
+  .side { max-height: none; }
+  .pane { overflow: visible; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><h1>REmake Level Atlas</h1><small id="subtitle"></small></div>
+    <span class="ctl">Character
+      <span class="seg" id="charseg"><button data-c="jill" aria-pressed="true">Jill</button><button data-c="chris" aria-pressed="false">Chris</button></span>
+    </span>
+    <label class="ctl" for="diff">Difficulty
+      <select id="diff"><option value="ve">Very Easy</option><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select>
+    </label>
+    <label class="ctl" for="skin">Style
+      <select id="skin"><option value="remake">REmake (2002)</option><option value="re2">Resident Evil 2 (1998)</option><option value="atlas">Atlas</option></select>
+    </label>
+    <button class="btn" id="assets-btn" title="Pictures from your own discs">Assets</button>
+  </header>
+  <main class="layout">
+    <section class="mapcol">
+      <nav class="floors" id="floors" aria-label="Floors"></nav>
+      <div class="maptools">
+        <label class="ctl" for="colorby">Colour rooms by
+          <select id="colorby">
+            <option value="reach">Reachable now</option>
+            <option value="sphere">Progression layer</option>
+            <option value="visits">Visits on route</option>
+            <option value="hub">Through-traffic (hub score)</option>
+            <option value="save">Doors to nearest save room</option>
+            <option value="enemy">Enemies (this difficulty)</option>
+            <option value="degree">Number of doors</option>
+            <option value="area">Area</option>
+          </select>
+        </label>
+        <label class="toggle"><input type="checkbox" id="t-labels" checked> Names</label>
+        <label class="toggle"><input type="checkbox" id="t-doors" checked> Doors</label>
+        <label class="toggle"><input type="checkbox" id="t-pins" checked> Items</label>
+        <label class="toggle"><input type="checkbox" id="t-route" checked> Route</label>
+        <label class="toggle"><input type="checkbox" id="t-links" checked> Stair links</label>
+        <label class="toggle"><input type="checkbox" id="t-bgtip" checked> Hover pictures</label>
+        <span class="zoom"><button id="z-in" aria-label="Zoom in">+</button><button id="z-out" aria-label="Zoom out">&minus;</button><button id="z-fit" aria-label="Fit floor">&#x2922;</button></span>
+      </div>
+      <div class="mapwrap" id="mapwrap">
+        <svg id="map" role="img" aria-label="Floor map"></svg>
+        <div class="floorname" id="floorname"></div>
+        <div class="legend" id="legend"></div>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </section>
+    <aside class="side">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="explore" aria-selected="true">Explore</button>
+        <button role="tab" data-tab="route" aria-selected="false">Route</button>
+        <button role="tab" data-tab="keys" aria-selected="false">Locks</button>
+        <button role="tab" data-tab="analysis" aria-selected="false">Analysis</button>
+        <button role="tab" data-tab="gallery" aria-selected="false">Gallery</button>
+      </nav>
+      <div class="pane" id="pane"></div>
+    </aside>
+  </main>
+</div>
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Background viewer"></div>
+<div class="modal" id="assets" hidden role="dialog" aria-modal="true" aria-label="Pictures"></div>
+
+<script>
+const D = /*__DATA__*/null;
+const NS = "http://www.w3.org/2000/svg";
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const ROOM = new Map(D.rooms.map(r => [r.id, r]));
+const FLOOR = new Map(D.floors.map(f => [f.id, f]));
+const TOK = new Map(D.tokens.map(t => [t.id, t]));
+const AREA = new Map(D.areas.map(a => [a.id, a]));
+const MODES = ["jill-ve", "chris-ve", "jill-easy", "chris-easy", "jill-normal", "chris-normal", "jill-hard", "chris-hard"];
+// map icon categories (build.py item_cat): border colour on the map, in the legend and on the room card; enemies and people are round and start hidden
+const ICAT = [
+  {id: "key", label: "Keys", tag: "Key", color: "#ffd23f"},
+  {id: "quest", label: "Puzzle & quest items", tag: "Puzzle/quest", color: "#b48cff"},
+  {id: "health", label: "Healing", tag: "Healing", color: "#5fd068"},
+  {id: "weapon", label: "Weapons", tag: "Weapon", color: "#ff5a4e"},
+  {id: "ammo", label: "Ammo", tag: "Ammo", color: "#ff9f43"},
+  {id: "defense", label: "Defense items & fuel", tag: "Defense/fuel", color: "#ff7bd0"},
+  {id: "save", label: "Typewriter, ribbons, item box", tag: "Save/storage", color: "#3fc8f0"},
+  {id: "file", label: "Files & maps", tag: "File/map", color: "#d5dbe3"},
+  {id: "enemy", label: "Enemies", tag: "Enemy", color: "#d0403a", round: true, off: true},
+  {id: "person", label: "People", tag: "Person", color: "#8fb4ff", round: true, off: true},
+];
+const ICATM = new Map(ICAT.map(c => [c.id, c]));
+const OUT = new Map(D.rooms.map(r => [r.id, []]));
+D.doors.forEach((d, i) => {
+  d.i = i;
+  if (d.ab) OUT.get(d.a).push({d, from: d.a, to: d.b, req: d.ab});
+  if (d.ba) OUT.get(d.b).push({d, from: d.b, to: d.a, req: d.ba});
+});
+const NEIGH = new Map(D.rooms.map(r => [r.id, new Set()]));
+D.doors.forEach(d => { NEIGH.get(d.a).add(d.b); NEIGH.get(d.b).add(d.a); });
+const SAVE = new Set(D.rooms.filter(r => r.save).map(r => r.id));
+const tokName = t => (TOK.get(t) || {name: t}).name;
+const onFloor = (r, f) => r.outlines.find(o => o.floor === f);
+const lpOn = (r, f) => (onFloor(r, f) || r.outlines[0]).lp;
+const floorsOf = r => r.outlines.map(o => FLOOR.get(o.floor).label).join(" + ");
+const startHave = c => new Set([c, ...D.startHave[c]]);
+const inReach = (t, reach) => t.room == null || reach.has(t.room);
+
+/* ---------- logic engine ---------- */
+// A requirement is a list of alternatives; each alternative is a list of tokens that must all be held.
+// "@other" means the door is barred on this side until it has been opened from the far side.
+function clauseOk(cl, have, d, unlocked) { return cl.every(t => t === "@other" ? unlocked.has(d.i) : have.has(t)); }
+function passable(e, have, unlocked) { return e.req.some(cl => clauseOk(cl, have, e.d, unlocked)); }
+function missingFor(e, have, unlocked) {
+  let best = null;
+  for (const cl of e.req) {
+    const m = cl.filter(t => t === "@other" ? !unlocked.has(e.d.i) : !have.has(t));
+    if (!best || m.length < best.length) best = m;
+  }
+  return best || [];
+}
+function reachFrom(start, have, unlocked) {
+  const prev = new Map([[start, null]]); const q = [start];
+  while (q.length) {
+    const r = q.shift();
+    for (const e of OUT.get(r)) if (!prev.has(e.to) && passable(e, have, unlocked)) { prev.set(e.to, e); q.push(e.to); }
+  }
+  return prev;
+}
+function pathTo(prev, target) {
+  if (!prev.has(target)) return null;
+  const p = []; let r = target;
+  while (prev.get(r)) { const e = prev.get(r); p.unshift(e); r = e.from; }
+  return p;
+}
+function tokOk(t, have, char) { return t.chars.includes(char) && t.req.some(cl => cl.every(x => have.has(x))); }
+// Progression layers: everything reachable, take every item that can be taken, repeat.
+function spheres(char, ban = new Set(), start = D.start[char]) {
+  const have = startHave(char); const roomS = new Map(); const tokS = new Map(); const layers = [];
+  for (let s = 0; s < 200; s++) {
+    const reach = reachFrom(start, have, new Set());
+    for (const r of reach.keys()) if (!roomS.has(r)) roomS.set(r, s);
+    const got = D.tokens.filter(t => !have.has(t.id) && !ban.has(t.id) && inReach(t, reach) && tokOk(t, have, char));
+    if (!got.length) break;
+    got.forEach(t => { have.add(t.id); tokS.set(t.id, s); });
+    layers.push({s, tokens: got.map(t => t.id), rooms: [...reach.keys()].filter(r => roomS.get(r) === s)});
+  }
+  return {roomS, tokS, layers, have};
+}
+function canGet(target, char, ban) {
+  const sp = spheres(char, ban);
+  return target.startsWith("room:") ? sp.roomS.has(target.slice(5)) : sp.tokS.has(target);
+}
+// Smallest set of tokens that still lets you reach the target (drop one at a time, latest first).
+function needs(target, char) {
+  const sp = spheres(char);
+  if (!canGet(target, char, new Set())) return null;
+  const order = [...sp.tokS.keys()].sort((a, b) => sp.tokS.get(b) - sp.tokS.get(a));
+  const ban = new Set();
+  for (const t of order) { if (t === target) continue; ban.add(t); if (!canGet(target, char, ban)) ban.delete(t); }
+  return [...sp.tokS.keys()].filter(t => !ban.has(t) && t !== target).sort((a, b) => sp.tokS.get(a) - sp.tokS.get(b));
+}
+// Walk an ordered objective list; each leg is the fewest doors from where you stand.
+function planRoute(char, objectives) {
+  const have = startHave(char); const unlocked = new Set(); let cur = D.start[char];
+  const legs = []; const visits = new Map([[cur, 1]]);
+  for (const id of objectives) {
+    const t = TOK.get(id); if (!t || !t.chars.includes(char)) continue;
+    const dest = t.room || cur;
+    const prev = reachFrom(cur, have, unlocked); const path = pathTo(prev, dest);
+    const leg = {tok: id, from: cur, to: dest, path: path || [], blocked: !path || !tokOk(t, have, char), have: new Set(have), unlocked: new Set(unlocked)};
+    if (leg.blocked) leg.missing = !path ? "no open way to " + ROOM.get(dest).name : t.req.map(cl => cl.filter(x => !have.has(x)).map(tokName).join(" + ")).join(" or ");
+    if (path) for (const e of path) { unlocked.add(e.d.i); visits.set(e.to, (visits.get(e.to) || 0) + 1); }
+    if (path) cur = dest;
+    have.add(id); legs.push(leg);
+  }
+  return {legs, visits, end: cur};
+}
+function greedyOrder(char, extra = []) {
+  const goal = D.goal[char]; const need = new Set(needs(goal, char) || []); need.add(goal); extra.forEach(x => need.add(x));
+  const have = startHave(char); const order = []; let cur = D.start[char];
+  while (need.size) {
+    const prev = reachFrom(cur, have, new Set());
+    let best = null, bd = 1e9;
+    for (const id of need) {
+      const t = TOK.get(id); if (!inReach(t, prev) || !tokOk(t, have, char)) continue;
+      const d = t.room ? pathTo(prev, t.room).length : 0; if (d < bd) { bd = d; best = id; }
+    }
+    if (!best) break;
+    order.push(best); need.delete(best); have.add(best); cur = TOK.get(best).room || cur;
+  }
+  return order;
+}
+// Up to k different door sequences between two rooms (Yen's algorithm on door count).
+function kPaths(from, to, have, unlocked, k = 3) {
+  const sp = (src, banE, banN) => {
+    const prev = new Map([[src, null]]); const q = [src];
+    while (q.length) { const r = q.shift();
+      for (const e of OUT.get(r)) if (!prev.has(e.to) && !banN.has(e.to) && !banE.has(e) && passable(e, have, unlocked)) { prev.set(e.to, e); q.push(e.to); } }
+    return pathTo(prev, to);
+  };
+  const first = sp(from, new Set(), new Set()); if (!first) return [];
+  const A = [first]; const B = [];
+  const key = p => p.map(e => e.d.i + ":" + e.to).join(",");
+  for (let n = 1; n < k; n++) {
+    const last = A[n - 1];
+    for (let i = 0; i < last.length; i++) {
+      const root = last.slice(0, i); const spur = i ? root[i - 1].to : from;
+      const banE = new Set(); for (const p of A) if (key(p.slice(0, i)) === key(root) && p[i]) banE.add(p[i]);
+      const banN = new Set([from, ...root.map(e => e.to)]); banN.delete(spur);
+      const tail = sp(spur, banE, banN);
+      if (tail) { const cand = root.concat(tail); if (!B.some(p => key(p) === key(cand)) && !A.some(p => key(p) === key(cand))) B.push(cand); }
+    }
+    if (!B.length) break;
+    B.sort((a, b) => a.length - b.length); A.push(B.shift());
+  }
+  return A;
+}
+
+/* ---------- topology metrics (locks ignored) ---------- */
+const METRIC = (() => {
+  const ids = D.rooms.map(r => r.id); const bc = new Map(ids.map(i => [i, 0]));
+  for (const s of ids) { // Brandes
+    const S = [], P = new Map(ids.map(i => [i, []])), sig = new Map(ids.map(i => [i, 0])), dist = new Map(ids.map(i => [i, -1]));
+    sig.set(s, 1); dist.set(s, 0); const Q = [s];
+    while (Q.length) { const v = Q.shift(); S.push(v);
+      for (const w of NEIGH.get(v)) { if (dist.get(w) < 0) { dist.set(w, dist.get(v) + 1); Q.push(w); }
+        if (dist.get(w) === dist.get(v) + 1) { sig.set(w, sig.get(w) + sig.get(v)); P.get(w).push(v); } } }
+    const del = new Map(ids.map(i => [i, 0]));
+    while (S.length) { const w = S.pop(); for (const v of P.get(w)) del.set(v, del.get(v) + sig.get(v) / sig.get(w) * (1 + del.get(w))); if (w !== s) bc.set(w, bc.get(w) + del.get(w)); }
+  }
+  const n = ids.length; ids.forEach(i => bc.set(i, bc.get(i) / ((n - 1) * (n - 2))));
+  const save = new Map(); const q = [...SAVE]; q.forEach(i => save.set(i, 0));
+  while (q.length) { const v = q.shift(); for (const w of NEIGH.get(v)) if (!save.has(w)) { save.set(w, save.get(v) + 1); q.push(w); } }
+  // articulation points (rooms whose loss splits the estate)
+  const disc = new Map(), low = new Map(), art = new Set(); let time = 0;
+  const dfs = (u, parent) => { disc.set(u, ++time); low.set(u, time); let kids = 0;
+    for (const v of NEIGH.get(u)) { if (!disc.has(v)) { kids++; dfs(v, u); low.set(u, Math.min(low.get(u), low.get(v)));
+        if (parent && low.get(v) >= disc.get(u)) art.add(u); }
+      else if (v !== parent) low.set(u, Math.min(low.get(u), disc.get(v))); }
+    if (!parent && kids > 1) art.add(u); };
+  ids.forEach(i => { if (!disc.has(i)) dfs(i, null); });
+  return {bc, save, art};
+})();
+function enemies(r, mode) {
+  let n = 0;
+  for (const c of r.contents) if (c.k === "enemies" && (c.m >> MODES.indexOf(mode)) & 1) { const m = /^(\d+)/.exec(c.t); n += m ? +m[1] : 1; }
+  return n;
+}
+
+/* ---------- state ---------- */
+const S = {
+  char: "jill", diff: "normal", floor: "mansion1f", tab: "explore", colorby: "reach", sel: null,
+  have: startHave("jill"), unlocked: new Set(), pos: D.start.jill, trail: [D.start.jill], doorsWalked: 0, auto: true,
+  routeKind: "guide", routeLeg: -1, step: -1, legAlt: new Map(), otherWays: true, alt: null, show: {labels: true, doors: true, pins: true, route: true, links: true, bgtip: true}, routeRest: false, stepGot: [], follow: true, followW: 340, icats: new Set(ICAT.filter(c => !c.off).map(c => c.id)),
+  view: null, sortKey: "hub", sortDir: -1, lockSel: null, layerFill: -1, galGame: null, galFilter: "all"
+};
+const mode = () => S.char + "-" + S.diff;
+let SP = spheres("jill"); let ROUTE = null;
+function recompute() {
+  SP = spheres(S.char);
+  const order = S.routeKind === "guide" ? D.objectives[S.char] : greedyOrder(S.char);
+  ROUTE = planRoute(S.char, order); ROUTE.kind = S.routeKind;
+  WAYS.clear(); S.legAlt = new Map(); S.step = -1; S.routeLeg = -1; playStop(); buildSteps();
+}
+function resetRun() {
+  S.have = startHave(S.char); S.unlocked = new Set(); S.pos = D.start[S.char]; S.trail = [S.pos]; S.doorsWalked = 0; S.alt = null; S.layerFill = -1;
+}
+
+/* ---------- colour ---------- */
+let RAMP = []; // from the skin's --ramp
+function readRamp() { RAMP = CSS("--ramp").split(",").map(x => x.trim()).filter(x => /^#[0-9a-f]{6}$/i.test(x)); }
+function ramp(t) {
+  t = Math.max(0, Math.min(1, t)); const x = t * (RAMP.length - 1); const i = Math.min(RAMP.length - 2, Math.floor(x)); const f = x - i;
+  const a = RAMP[i], b = RAMP[i + 1]; const h = s => [1, 3, 5].map(k => parseInt(s.slice(k, k + 2), 16));
+  const A = h(a), B = h(b); return "rgb(" + A.map((v, k) => Math.round(v + (B[k] - v) * f)).join(",") + ")";
+}
+const CSS = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let REACH = new Map();
+function roomFill(r) {
+  const c = S.colorby;
+  if (c === "reach") { if (!REACH.has(r.id)) return CSS("--locked"); return S.trail.includes(r.id) ? CSS("--seen") : CSS("--reach"); }
+  if (c === "area") return AREA.get(r.area).color;
+  const v = metricValue(r, c); if (v == null) return CSS("--room");
+  const mx = metricMax(c); return ramp(mx ? v / mx : 0);
+}
+function metricValue(r, c) {
+  if (c === "sphere") return SP.roomS.has(r.id) ? SP.roomS.get(r.id) : null;
+  if (c === "visits") return ROUTE && ROUTE.visits.get(r.id) || 0;
+  if (c === "hub") return METRIC.bc.get(r.id);
+  if (c === "save") return METRIC.save.has(r.id) ? METRIC.save.get(r.id) : null;
+  if (c === "enemy") return enemies(r, mode());
+  if (c === "degree") return NEIGH.get(r.id).size;
+}
+const MAXC = {};
+function metricMax(c) { const k = c + mode() + S.routeKind; if (MAXC[k] == null) MAXC[k] = Math.max(...D.rooms.map(r => metricValue(r, c) || 0)); return MAXC[k]; }
+
+/* ---------- map ---------- */
+const svg = $("#map");
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function floorsShown() { return S.floor === "atlas" ? D.floors : [FLOOR.get(S.floor)]; }
+function off(fid) { return S.floor === "atlas" ? [FLOOR.get(fid).ax, FLOOR.get(fid).ay] : [0, 0]; }
+function P(fid, p) { const o = off(fid); return [p[0] + o[0], p[1] + o[1]]; }
+function fitView() {
+  const fs = floorsShown(); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const f of fs) { const o = off(f.id); x0 = Math.min(x0, o[0]); y0 = Math.min(y0, o[1] - (S.floor === "atlas" ? 22 : 0)); x1 = Math.max(x1, o[0] + f.w); y1 = Math.max(y1, o[1] + f.h); }
+  const pad = 14; S.view = {x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad}; applyView();
+}
+function applyView() { const v = S.view; svg.setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`); }
+// Camera moves: a short glide (0.1-0.2 s, longer for longer trips) so you can see which way the map is moving.
+let ANIM = 0;
+function moveView(t, snap) {
+  cancelAnimationFrame(ANIM);
+  if (!t) return;
+  const a = {...S.view}, dist = Math.hypot(t.x + t.w / 2 - a.x - a.w / 2, t.y + t.h / 2 - a.y - a.h / 2);
+  if (snap || matchMedia("(prefers-reduced-motion: reduce)").matches) { S.view = t; applyView(); return; }
+  const ms = Math.min(220, 110 + 110 * dist / a.w), t0 = performance.now();
+  const tick = now => { const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    S.view = {x: a.x + (t.x - a.x) * e, y: a.y + (t.y - a.y) * e, w: a.w + (t.w - a.w) * e, h: a.h + (t.h - a.h) * e}; applyView();
+    if (k < 1) ANIM = requestAnimationFrame(tick); };
+  ANIM = requestAnimationFrame(tick);
+}
+function screenRatio() { const b = svg.getBoundingClientRect(); return b.width ? b.height / b.width : .7; }
+function roomView(s) { // centred on the room you stand in, at the follow zoom (which keeps any zoom you set while following)
+  const r = ROOM.get(s.room), ol = onFloor(r, s.f) || r.outlines[0], [cx, cy] = P(ol.floor, ol.lp), w = S.followW, h = w * screenRatio();
+  return {x: cx - w / 2, y: cy - h / 2, w, h};
+}
+function legView(i) { // framing every room of a leg that is on the map shown
+  const [s0, s1] = LEGSPAN[i], shown = new Set(floorsShown().map(f => f.id)); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const s of STEPS.slice(s0, s1 + 1)) { const ol = onFloor(ROOM.get(s.room), s.f); if (!ol || !shown.has(ol.floor)) continue; const o = off(ol.floor);
+    for (let j = 0; j < ol.poly.length; j += 2) { x0 = Math.min(x0, ol.poly[j] + o[0]); x1 = Math.max(x1, ol.poly[j] + o[0]); y0 = Math.min(y0, ol.poly[j + 1] + o[1]); y1 = Math.max(y1, ol.poly[j + 1] + o[1]); } }
+  if (x0 > x1) return null;
+  const ar = screenRatio(); let w = Math.max(200, x1 - x0 + 60), h = y1 - y0 + 60;
+  if (h / w > ar) w = h / ar; else h = w * ar;
+  return {x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h};
+}
+/* ---------- route: steps, ways, lines ---------- */
+// The route as a list of rooms in walking order. Each step is a room, the door edge that led into it and what is done there.
+let STEPS = [], LEGSPAN = []; const WAYS = new Map();
+const WAYC = ["#e8a33d", "#7fc6e6", "#c58fd8", "#7ed37f", "#ff8fb8"];
+function legPath(i) { const k = S.legAlt.get(i); return (k && legWays(i)[k]) || ROUTE.legs[i].path; }
+// Other ways to walk a leg with what you hold at that point: no doubling back, at most a few doors longer than the shortest.
+function legWays(i) {
+  if (!WAYS.has(i)) {
+    const l = ROUTE.legs[i], key = p => p.map(e => e.d.i).join();
+    const ps = l.path.length ? kPaths(l.from, l.to, l.have, l.unlocked, 6).filter(p => key(p) !== key(l.path)) : [];
+    const lim = l.path.length + Math.max(4, Math.ceil(l.path.length * .5));
+    WAYS.set(i, l.path.length ? [l.path, ...ps.filter(p => p.length <= lim)].slice(0, 5) : []);
+  }
+  return WAYS.get(i);
+}
+function buildSteps() {
+  const home = D.start[S.char]; STEPS = [{room: home, e: null, f: ROOM.get(home).floor, leg: 0, toks: []}]; LEGSPAN = [];
+  const visits = new Map([[home, 1]]);
+  ROUTE.legs.forEach((l, i) => {
+    const s0 = STEPS.length - 1, p = legPath(i);
+    for (const e of p) { STEPS.push({room: e.to, e, f: doorSides(e)[2], leg: i, toks: []}); visits.set(e.to, (visits.get(e.to) || 0) + 1); }
+    if (!p.length) { const last = STEPS[STEPS.length - 1]; STEPS.push({room: last.room, e: null, f: last.f, leg: i, toks: []}); }
+    STEPS[STEPS.length - 1].toks.push(l.tok); LEGSPAN.push([s0, STEPS.length - 1]);
+  });
+  ROUTE.visits = visits; for (const k in MAXC) if (k.startsWith("visits")) delete MAXC[k];
+}
+function routeSegs() { // what the route layer draws: [{cls, steps, color, arrows}]
+  if (S.alt) { const start = {room: S.pos, e: null, toks: []}; return S.alt.map((p, k) => ({cls: k ? "alt" + k : "leg", arrows: true, steps: [start, ...p.map(e => ({room: e.to, e, toks: []}))]})); }
+  if (!S.show.route || !ROUTE || S.tab !== "route" || !STEPS.length) return [];
+  if (S.routeLeg < 0) return [{cls: "", steps: STEPS}];
+  const [s0, s1] = LEGSPAN[S.routeLeg], out = S.routeRest ? [{cls: "past", steps: STEPS.slice(0, s0 + 1)}, {cls: "ahead", steps: STEPS.slice(s1)}] : [];
+  if (S.step >= 0) return out.concat([{cls: "walked", steps: STEPS.slice(s0, S.step + 1)}, {cls: "leg", arrows: true, steps: STEPS.slice(S.step, s1 + 1)}]);
+  const pick = S.legAlt.get(S.routeLeg) || 0;
+  if (S.otherWays) legWays(S.routeLeg).forEach((p, k) => { if (k !== pick) out.push({cls: "way", color: WAYC[k], steps: [STEPS[s0], ...p.map(e => ({room: e.to, e, toks: []}))]}); });
+  out.push({cls: "leg", color: WAYC[pick], arrows: true, steps: STEPS.slice(s0, s1 + 1)}); return out;
+}
+function routeFocus() { // rooms the route view picks out: inv (null = no dimming), on (this leg), cur (where the stepper is)
+  if (S.alt) { const on = new Set([S.pos, ...S.alt.flat().map(e => e.to)]); return {inv: on, on, cur: null}; }
+  if (!S.show.route || !ROUTE || S.tab !== "route" || !STEPS.length) return {inv: null, on: new Set(), cur: null};
+  const all = new Set(STEPS.map(s => s.room));
+  if (S.routeLeg < 0) return {inv: all, on: new Set(), cur: null};
+  const [s0, s1] = LEGSPAN[S.routeLeg], on = new Set(STEPS.slice(s0, s1 + 1).map(s => s.room)), inv = new Set(S.routeRest ? all : on);
+  on.forEach(r => inv.add(r)); if (S.otherWays && S.step < 0) legWays(S.routeLeg).flat().forEach(e => inv.add(e.to));
+  return {inv, on, cur: S.step >= 0 ? STEPS[S.step].room : null};
+}
+function legUse() { // floor links the active leg uses; null = every link (no leg picked)
+  if (S.tab !== "route" || !S.show.route || S.routeLeg < 0 || !STEPS.length) return null;
+  const [s0, s1] = LEGSPAN[S.routeLeg], st = STEPS.slice(s0, s1 + 1), doors = new Set(), rooms = new Set();
+  st.forEach((s, i) => { if (s.e) doors.add(s.e.d.i); const nx = st[i + 1]; if (i && nx && nx.e && doorSides(nx.e)[0] !== s.f) rooms.add(s.room); });
+  if (S.otherWays && S.step < 0) legWays(S.routeLeg).flat().forEach(e => doors.add(e.d.i));
+  return {doors, rooms};
+}
+function doorSides(e) { const d = e.d; return d.a === e.from ? [d.fa, d.pa, d.fb, d.pb] : [d.fb, d.pb, d.fa, d.pa]; } // exit floor, point; entry floor, point
+// Line through a run of steps: in each room from the door you came in by to the door you leave by (or to the middle
+// of the room where something is picked up), bending round inside corners so it stays within the walls.
+function pathGeom(steps) {
+  const pts = [], doors = []; const first = steps.find((s, i) => i && s.e); if (!first) return {pts, doors};
+  let f = doorSides(first.e)[0], p = lpOn(ROOM.get(steps[0].room), f);
+  steps.forEach((s, i) => {
+    if (!i) return;
+    if (s.e) { const [fx, px, fe, pe] = doorSides(s.e); pts.push(...roomWalk(ROOM.get(s.e.from), f, p, fx, px)); doors.push(pts.length); pts.push([fx, px], [fe, pe]); f = fe; p = pe; }
+    if (s.toks.length || i === steps.length - 1) { const r = ROOM.get(s.room), c = lpOn(r, f); pts.push(...roomWalk(r, f, p, f, c)); p = c; }
+  });
+  return {pts, doors};
+}
+const WALKS = new Map();
+function roomWalk(r, f1, p1, f2, p2) { // floor-tagged points from p1 (floor f1) to p2 (floor f2) inside room r; stairs inside the room join two floors
+  const key = r.id + "|" + f1 + p1 + "|" + f2 + p2; if (WALKS.has(key)) return WALKS.get(key);
+  let out;
+  if (f1 !== f2) { const st = r.stairs.find(x => x.f === f1 && x.to === f2); out = st ? roomWalk(r, f1, p1, f1, st.p).concat(roomWalk(r, f2, st.tp, f2, p2)) : [[f1, p1], [f2, p2]]; }
+  else { const ol = onFloor(r, f1); out = ol ? insideWalk(ol.poly, inward(ol.poly, p1), inward(ol.poly, p2)).map(q => [f1, q]) : [[f1, p1], [f2, p2]]; }
+  WALKS.set(key, out); return out;
+}
+function segDist(px, py, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy; const t = L ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L)) : 0; return Math.hypot(px - ax - t * dx, py - ay - t * dy); }
+function wallDist(x, y, P) { let m = 1e9; for (let i = 0, j = P.length - 2; i < P.length; j = i, i += 2) m = Math.min(m, segDist(x, y, P[j], P[j + 1], P[i], P[i + 1])); return m; }
+function inward(P, p) { // door marks sit on the wall: step a little into the room
+  if (pip(p[0], p[1], P) && wallDist(p[0], p[1], P) >= 1.2) return p;
+  for (const r of [1.6, 2.6, 4, 6, 9]) { let best = null, bd = 0;
+    for (let k = 0; k < 16; k++) { const q = [p[0] + r * Math.cos(k * Math.PI / 8), p[1] + r * Math.sin(k * Math.PI / 8)];
+      if (pip(q[0], q[1], P)) { const d = wallDist(q[0], q[1], P); if (d > bd) { bd = d; best = q; } } }
+    if (best) return best; }
+  return p;
+}
+function turn(a, b, c) { return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]); }
+function sees(a, b, P) { // the straight line a-b stays inside the room
+  for (let i = 0, j = P.length - 2; i < P.length; j = i, i += 2) { const c = [P[j], P[j + 1]], d = [P[i], P[i + 1]];
+    if (turn(c, d, a) * turn(c, d, b) < 0 && turn(a, b, c) * turn(a, b, d) < 0) return false; }
+  for (let t = .125; t < 1; t += .125) if (!pip(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, P)) return false;
+  return true;
+}
+const CORNERS = new WeakMap();
+function corners(P) { // inside (reflex) corners, pulled 2.4 units into the room: the only places a shortest walk bends
+  if (CORNERS.has(P)) return CORNERS.get(P);
+  const n = P.length / 2, out = []; let A = 0;
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; A += P[2 * i] * P[2 * j + 1] - P[2 * j] * P[2 * i + 1]; }
+  for (let i = 0; i < n; i++) {
+    const u = (i + n - 1) % n, w = (i + 1) % n, v = [P[2 * i], P[2 * i + 1]];
+    if (turn([P[2 * u], P[2 * u + 1]], v, [P[2 * w], P[2 * w + 1]]) * A >= 0) continue;
+    const e1 = [P[2 * u] - v[0], P[2 * u + 1] - v[1]], e2 = [P[2 * w] - v[0], P[2 * w + 1] - v[1]], l1 = Math.hypot(...e1), l2 = Math.hypot(...e2);
+    if (!l1 || !l2) continue;
+    const b = [-(e1[0] / l1 + e2[0] / l2), -(e1[1] / l1 + e2[1] / l2)], L = Math.hypot(...b); if (L < 1e-6) continue;
+    for (const k of [2.4, -2.4]) { const q = [v[0] + b[0] / L * k, v[1] + b[1] / L * k]; if (pip(q[0], q[1], P)) { out.push(q); break; } }
+  }
+  CORNERS.set(P, out); return out;
+}
+function insideWalk(P, a, b) { // shortest walk inside the polygon: Dijkstra over the inside corners
+  if (sees(a, b, P)) return [a, b];
+  const N = [a, b, ...corners(P)], dist = N.map(() => Infinity), prev = N.map(() => -1), done = N.map(() => false); dist[0] = 0;
+  for (;;) {
+    let u = -1; for (let i = 0; i < N.length; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+    if (u < 0 || u === 1) break; done[u] = true;
+    for (let v = 0; v < N.length; v++) if (!done[v]) { const d = dist[u] + Math.hypot(N[v][0] - N[u][0], N[v][1] - N[u][1]); if (d < dist[v] && sees(N[u], N[v], P)) { dist[v] = d; prev[v] = u; } }
+  }
+  if (prev[1] < 0) return [a, b];
+  const out = []; for (let i = 1; i >= 0; i = prev[i]) out.unshift(N[i]); return out;
+}
+function draw() {
+  REACH = reachFrom(S.pos, S.have, S.unlocked);
+  svg.textContent = "";
+  const shown = new Set(floorsShown().map(f => f.id)); const atlas = S.floor === "atlas";
+  const gRooms = el("g", {}, svg), gDoors = el("g", {}, svg), gX = el("g", {}, svg), gPins = el("g", {}, svg), gRoute = el("g", {}, svg), gLbl = el("g", {}, svg), gTags = el("g", {}, svg);
+  if (atlas) for (const f of D.floors) {
+    el("rect", {class: "fframe", x: f.ax - 6, y: f.ay - 6, width: f.w + 12, height: f.h + 12}, gRooms);
+    el("text", {class: "ftitle", x: f.ax - 4, y: f.ay - 11}, gRooms).textContent = f.label;
+  }
+  const lockedLook = S.colorby === "reach"; const FOC = routeFocus(), USE = legUse(); const isOff = id => FOC.inv && !FOC.inv.has(id);
+  for (const r of D.rooms) {
+    for (const ol of r.outlines) {
+      if (!shown.has(ol.floor)) continue;
+      const o = off(ol.floor); const pts = [];
+      for (let i = 0; i < ol.poly.length; i += 2) pts.push((ol.poly[i] + o[0]) + "," + (ol.poly[i + 1] + o[1]));
+      const focus = isOff(r.id) ? " off" : FOC.cur === r.id ? " cur" : FOC.on.has(r.id) ? " on" : FOC.on.size ? " side" : "";
+      const pg = el("polygon", {points: pts.join(" "), class: "room" + (S.sel === r.id ? " sel" : "") + (S.pos === r.id && !(S.step >= 0 && S.tab === "route") ? " pos" : "") + focus, fill: roomFill(r)}, gRooms);
+      if (FOC.cur === r.id) el("polygon", {points: pts.join(" "), class: "curfill"}, gRooms);
+      pg.addEventListener("click", () => { if (moved) return; selectRoom(r.id); });
+      pg.addEventListener("pointermove", ev => showTip(ev, r));
+      pg.addEventListener("pointerleave", hideTip);
+      const [x, y] = P(ol.floor, ol.lp);
+      if (S.show.labels) {
+        const fs = atlas ? Math.min(4.2, ol.fs) : ol.fs;
+        el("text", {class: "lbl" + ((lockedLook && !REACH.has(r.id)) || isOff(r.id) ? " dim" : ""), x, y: y + fs * .35, "font-size": fs, "text-anchor": "middle"}, gLbl).textContent = r.name;
+      }
+    }
+  }
+  for (const f of floorsShown()) { // map symbols copied from the game's own map: stairs, raised floor, sealed doors
+    const g = el("g", {}, gRooms); const o = off(f.id);
+    for (const r of f.raised) el("rect", {class: "raised", x: r[0] + o[0], y: r[1] + o[1], width: r[2] - r[0], height: r[3] - r[1]}, g);
+    for (const s of f.stripes) el("rect", {class: "hatch", x: s[0] + o[0], y: s[1] + o[1], width: s[2] - s[0], height: s[3] - s[1]}, g);
+    for (const s of f.icons) el("rect", {class: "hatch", x: s[0] + o[0], y: s[1] + o[1], width: s[2] - s[0], height: s[3] - s[1]}, g);
+    if (S.show.doors) for (const r of f.sealed) {
+      const b = el("rect", {class: "dbar sealed", x: r[0] + o[0], y: r[1] + o[1], width: r[2], height: r[3]}, gDoors);
+      b.addEventListener("pointermove", ev => showTipText(ev, "Door you never use (scenery)")); b.addEventListener("pointerleave", hideTip);
+    }
+  }
+  if (S.show.doors) for (const d of D.doors) {
+    const look = doorLook(d); const tipFn = ev => showTipText(ev, doorText(d));
+    for (const b of d.bars) {
+      if (!shown.has(b.f)) continue;
+      const o = off(b.f);
+      const r = el("rect", {class: "dbar " + look, x: b.r[0] + o[0] - .3, y: b.r[1] + o[1] - .3, width: b.r[2] + .6, height: b.r[3] + .6, rx: .5}, gDoors);
+      r.addEventListener("pointermove", tipFn); r.addEventListener("pointerleave", hideTip);
+    }
+    if (d.kind === "opening" && shown.has(d.fa)) {
+      const [x, y] = P(d.fa, d.pa);
+      const c = el("circle", {class: "opening " + look, cx: x, cy: y, r: 2.6}, gDoors);
+      c.addEventListener("pointermove", tipFn); c.addEventListener("pointerleave", hideTip);
+    }
+    if (d.fa === d.fb || !S.show.links || (USE && !USE.doors.has(d.i))) continue;
+    if (atlas) { const [x1, y1] = P(d.fa, d.pa), [x2, y2] = P(d.fb, d.pb); el("path", {class: "xcurve", d: curve(x1, y1, x2, y2)}, gX); }
+    const A = ROOM.get(d.a), B = ROOM.get(d.b);
+    for (const [other, f, t, of, ot] of [[B, d.fa, d.ta, d.fb, d.tb], [A, d.fb, d.tb, d.fa, d.ta]]) {
+      if (!shown.has(f) || !t) continue;
+      drawLink(gTags, f, t, of, look, linkGlyph(d.note), `<b>${esc(linkWord(d.note))} to ${esc(other.name)}</b> <span class="sub">(${esc(FLOOR.get(of).label)}) · click to go there</span><br>` + doorText(d), () => jumpTo(of, other.id, ot));
+    }
+  }
+  if (S.show.links) for (const r of D.rooms) for (const st of r.stairs) {
+    if (!shown.has(st.f) || (USE && !USE.rooms.has(r.id))) continue;
+    drawLink(gTags, st.f, st.p, st.to, "open", "stairs", `<b>Stairs to ${esc(FLOOR.get(st.to).label)}</b> <span class="sub">· click to go there</span><br>${esc(r.name)} spans both floors`, () => jumpTo(st.to, r.id, st.tp));
+  }
+  if (S.arrive && shown.has(S.arrive.f) && Date.now() - S.arrive.t < 4000) {
+    const [x, y] = P(S.arrive.f, S.arrive.p); el("circle", {class: "arrive", cx: x, cy: y, r: 9}, gTags);
+  }
+  if (S.show.pins) for (const r of D.rooms) {
+    const ol = shown.has(r.outlines[0].floor) ? r.outlines[0] : r.outlines.find(o => shown.has(o.floor));
+    if (ol) drawIcons(r, ol, isOff(r.id) ? el("g", {opacity: .3}, gPins) : gPins);
+  }
+  for (const seg of routeSegs()) {
+    const {pts, doors} = pathGeom(seg.steps); const col = seg.color ? {style: "stroke:" + seg.color} : {};
+    let run = [];
+    const flush = () => { if (run.length > 1) el("polyline", {class: "route " + seg.cls, points: run.map(p => p.join(",")).join(" "), ...col}, gRoute); run = []; };
+    for (let i = 0; i < pts.length; i++) {
+      const [f, p] = pts[i];
+      if (i && pts[i - 1][0] !== f) {
+        flush();
+        if (atlas) { const [x1, y1] = P(pts[i - 1][0], pts[i - 1][1]), [x2, y2] = P(f, p); el("path", {class: "xcurve route " + seg.cls, d: curve(x1, y1, x2, y2), ...col}, gRoute); }
+      }
+      if (shown.has(f)) run.push(P(f, p)); else flush();
+    }
+    flush();
+    if (seg.arrows) for (const k of doors) { // chevron at each door, pointing the way you walk
+      const a = pts[k - 1], b = pts[k + 2], [f, p] = pts[k];
+      if (!a || !b || a[0] !== f || b[0] !== f || !shown.has(f)) continue;
+      const [x, y] = P(f, p), ang = Math.atan2(b[1][1] - a[1][1], b[1][0] - a[1][0]) * 180 / Math.PI;
+      el("path", {class: "rarrow", d: "M-1.8 -2.1L2.1 0L-1.8 2.1z", transform: `translate(${x} ${y}) rotate(${ang})`, ...(seg.color ? {style: "fill:" + seg.color} : {})}, gRoute);
+    }
+  }
+  if (S.tab === "route" && S.step >= 0 && STEPS[S.step]) { const s = STEPS[S.step], r = ROOM.get(s.room);
+    const ol = onFloor(r, s.f);
+    if (shown.has(s.f) && ol) { let [x, y] = P(s.f, ol.lp); if (S.show.labels) x -= r.name.length * (atlas ? Math.min(4.2, ol.fs) : ol.fs) * .27 + 5; // beside the name, like the "you are here" dot
+      el("circle", {class: "me-ring", cx: x, cy: y, r: 5}, gTags); el("circle", {class: "walker", cx: x, cy: y, r: 3.4}, gTags); } }
+  const me = ROOM.get(S.pos); const mo = me.outlines.find(o => shown.has(o.floor));
+  if (mo && !(S.tab === "route" && S.step >= 0)) { const fs = atlas ? Math.min(4.2, mo.fs) : mo.fs; let [x, y] = P(mo.floor, mo.lp);
+    if (S.show.labels) x -= me.name.length * fs * .27 + 5;
+    el("circle", {class: "me-ring", cx: x, cy: y, r: 4}, svg); el("circle", {class: "me", cx: x, cy: y, r: 3}, svg); }
+  $("#floorname").textContent = atlas ? "Whole estate" : FLOOR.get(S.floor).label;
+  drawLegend();
+}
+/* item icons: a grid of square pictures around the room name, kept inside the room and clear of the name, door marks, stairs and floor tags */
+const ICON_SIZES = [12, 10.5, 9, 7.5, 6.4, 5.4, 4.6, 3.9, 3.3];
+const TOKAT = new Map(D.tokens.filter(t => t.img && t.kind !== "event").map(t => [t.room + "|" + t.img, t]));
+let OBST = null; const SLOTS = new Map();
+function obstacles() { // per floor, in floor coordinates: [x0, y0, x1, y1]
+  const o = new Map(D.floors.map(f => [f.id, [...f.stripes, ...f.icons, ...f.sealed.map(r => [r[0], r[1], r[0] + r[2], r[1] + r[3]])]]));
+  for (const r of D.rooms) for (const ol of r.outlines) o.get(ol.floor).push(labelBox(r, ol)); // names can spill into the next room
+  for (const d of D.doors) {
+    for (const b of d.bars) o.get(b.f).push([b.r[0] - .5, b.r[1] - .5, b.r[0] + b.r[2] + .5, b.r[1] + b.r[3] + .5]);
+    if (d.kind === "opening") o.get(d.fa).push([d.pa[0] - 3, d.pa[1] - 3, d.pa[0] + 3, d.pa[1] + 3]);
+    if (d.fa === d.fb) continue;
+    for (const [f, t, of] of [[d.fa, d.ta, d.fb], [d.fb, d.tb, d.fa]]) if (t) o.get(f).push(linkBox(f, t, of));
+  }
+  for (const r of D.rooms) for (const st of r.stairs) o.get(st.f).push(linkBox(st.f, st.p, st.to));
+  return o;
+}
+function labelBox(r, ol) { const fs = ol.fs, [lx, ly] = ol.lp, lw = r.name.length * fs * .56; // name, plus the "you are here" dot on its left
+  return [lx - lw / 2 - 9, ly - fs * .75, lx + lw / 2 + 1.5, ly + fs * .45]; }
+function pip(x, y, P) { let c = false;
+  for (let i = 0, j = P.length - 2; i < P.length; j = i, i += 2) { const x1 = P[i], y1 = P[i + 1], x2 = P[j], y2 = P[j + 1];
+    if ((y1 > y) !== (y2 > y) && x < x1 + (y - y1) * (x2 - x1) / (y2 - y1)) c = !c; }
+  return c; }
+function segHitsRect(ax, ay, bx, by, x0, y0, x1, y1) { // Liang-Barsky: does the wall segment pass through the box?
+  let t0 = 0, t1 = 1; const dx = bx - ax, dy = by - ay;
+  for (const [p, q] of [[-dx, ax - x0], [dx, x1 - ax], [-dy, ay - y0], [dy, y1 - ay]]) {
+    if (p === 0) { if (q < 0) return false; continue; }
+    const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; }
+  }
+  return t0 < t1; }
+function boxFree(b, P, obs) {
+  if (![[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].every(([x, y]) => pip(x, y, P))) return false;
+  for (let i = 0, j = P.length - 2; i < P.length; j = i, i += 2) if (segHitsRect(P[j], P[j + 1], P[i], P[i + 1], b[0], b[1], b[2], b[3])) return false;
+  return !obs.some(o => o[0] < b[2] && b[0] < o[2] && o[1] < b[3] && b[1] < o[3]); }
+function iconSlots(r, ol, n) {
+  const key = r.id + "|" + ol.floor + "|" + n; if (SLOTS.has(key)) return SLOTS.get(key);
+  OBST = OBST || obstacles();
+  const P = ol.poly, [lx, ly] = ol.lp, label = labelBox(r, ol), obs = OBST.get(ol.floor);
+  const xs = P.filter((_, i) => i % 2 === 0), ys = P.filter((_, i) => i % 2);
+  const bx0 = Math.min(...xs), bx1 = Math.max(...xs), by0 = Math.min(...ys), by1 = Math.max(...ys);
+  const cap = Math.max(3.3, Math.min(bx1 - bx0, by1 - by0) * .3);
+  let best = null;
+  for (const s of ICON_SIZES) {
+    if (s > cap && s !== ICON_SIZES[ICON_SIZES.length - 1]) continue;
+    const g = s * .16, m = Math.max(.8, s * .12), st = s + g; const rows = [];
+    for (let j = 0; ; j++) { const b = label[3] + g + j * st, a = label[1] - g - s - j * st; const ok = [];
+      if (b + s <= by1) ok.push(b); if (a >= by0) ok.push(a); if (j === 2) ok.push(ly - s / 2); if (!ok.length && j > 2) break; rows.push(...ok); }
+    const slots = []; let left = n;
+    for (const y of rows) {
+      if (!left) break;
+      let placed = null;
+      for (let k = Math.min(left, Math.floor((bx1 - bx0) / st)); k >= 1 && !placed; k--)
+        for (const t of [0, 1, -1, 2, -2, 3, -3, 4, -4, 6, -6, 8, -8]) {
+          const cx = lx + t * st / 2; const xs_ = Array.from({length: k}, (_, i) => cx + (i - (k - 1) / 2) * st);
+          if (xs_.every(x => boxFree([x - s / 2 - m, y - m, x + s / 2 + m, y + s + m], P, obs))) { placed = xs_; break; }
+        }
+      if (placed) { for (const x of placed) slots.push([x - s / 2, y]); left -= placed.length; }
+    }
+    if (!best || slots.length > best.slots.length) best = {s, slots};
+    if (slots.length >= n) { best = {s, slots}; break; }
+  }
+  best.slots.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  SLOTS.set(key, best); return best;
+}
+function qty(c) { const m = /^(\d+) /.exec(c.t) || /\((\d+)×/.exec(c.t); return m && +m[1] > 1 ? +m[1] : 0; }
+function iconTip(ev, r, c, tok, got) {
+  const cat = ICATM.get(c.c); const ic = itemCss(c.s);
+  showTipText(ev, `<b>${esc(c.t)}</b> <span class="sub">· ${esc(r.name)}</span><br><span class="sub" style="color:${cat.color}">${esc(cat.tag)}${got ? " · you have it" : tok ? " · progression item" : ""}</span>${c.d ? `<br><span class="sub">${esc(c.d)}</span>` : ""}` + (ic && S.show.bgtip ? `<div class="tipimg" style="${ic}"></div>` : ""));
+}
+function drawIcons(r, ol, parent) {
+  const mi = MODES.indexOf(mode());
+  const cs = r.contents.filter(c => (c.m >> mi) & 1 && S.icats.has(c.c)).sort((a, b) => ICAT.indexOf(ICATM.get(a.c)) - ICAT.indexOf(ICATM.get(b.c)));
+  if (!cs.length) return;
+  const {s, slots} = iconSlots(r, ol, cs.length); if (!slots.length) return;
+  const over = cs.length > slots.length ? cs.length - slots.length + 1 : 0; const I = M && M.icons;
+  slots.forEach(([lx, ly], i) => {
+    const [x, y] = P(ol.floor, [lx, ly]);
+    if (over && i === slots.length - 1) {
+      const g = el("g", {class: "imore"}, parent); const rest = cs.slice(i);
+      el("rect", {x, y, width: s, height: s, rx: s * .2}, g);
+      el("text", {x: x + s / 2, y: y + s * .66, "text-anchor": "middle", "font-size": s * .48}, g).textContent = "+" + over;
+      g.addEventListener("pointermove", ev => showTipText(ev, `<b>Also in ${esc(r.name)}</b><br>` + rest.map(c => `<span style="color:${ICATM.get(c.c).color}">&#9632;</span> ${esc(c.t)}`).join("<br>")));
+      g.addEventListener("pointerleave", hideTip); g.addEventListener("click", () => { if (!moved) selectRoom(r.id); });
+      return;
+    }
+    const c = cs[i], cat = ICATM.get(c.c), tok = TOKAT.get(r.id + "|" + c.s), got = !!tok && S.have.has(tok.id);
+    const g = el("g", {class: "ico" + (got ? " got" : "")}, parent); const rx = cat.round ? s / 2 : s * .14, ins = cat.round ? s * .15 : s * .05;
+    el("rect", {class: "ibg", x, y, width: s, height: s, rx}, g);
+    const k = !I ? null : I.index ? I.index[c.s] : M.items && M.items.index[c.s];
+    if (k == null) el("path", {class: "iglyph", d: GLYPH[c.c] || GLYPH.quest, stroke: cat.color, transform: `translate(${x + s * .1} ${y + s * .1}) scale(${s * .08})`}, g);
+    else { const sv = el("svg", {x: x + ins, y: y + ins, width: s - 2 * ins, height: s - 2 * ins, viewBox: `${(k % I.cols) * I.size} ${Math.floor(k / I.cols) * I.size} ${I.size} ${I.size}`}, g);
+      el("image", {href: I.file, width: I.w, height: I.h}, sv); }
+    el("rect", {class: "ibd", x, y, width: s, height: s, rx, stroke: cat.color}, g);
+    const q = qty(c); if (q && s >= 4.5) el("text", {class: "icnt", x: x + s - s * .06, y: y + s - s * .08, "text-anchor": "end", "font-size": s * .4}, g).textContent = q;
+    g.addEventListener("pointermove", ev => iconTip(ev, r, c, tok, got)); g.addEventListener("pointerleave", hideTip);
+    g.addEventListener("click", () => { if (!moved) selectRoom(r.id); });
+  });
+}
+// Without item pictures (a public copy before any import) each icon is a small line drawing of its type, 10x10 units.
+const GLYPH = {
+  key: "M2.6 3.4a1.6 1.6 0 1 0 .01 0M4.2 5h4.6M7.4 5v1.8M8.6 5v1.4",
+  quest: "M5 1.4L8.6 5L5 8.6L1.4 5ZM5 3.4L6.6 5L5 6.6L3.4 5Z",
+  health: "M4 1.8h2v2.2h2.2v2H6v2.2H4V6H1.8V4H4Z",
+  weapon: "M1.4 3.2h7.2v2H5.2l-.8 3H2.6l.8-3H1.4Z",
+  ammo: "M2.6 8.4V4.2a.9 1.4 0 0 1 1.8 0v4.2ZM5.6 8.4V4.2a.9 1.4 0 0 1 1.8 0v4.2Z",
+  defense: "M2 8l5.6-5.6L8.6 1.4 8 3.4 3 8.4M2.2 6.6l1.2 1.2",
+  save: "M1.8 4.2h6.4v3.6H1.8ZM3 4.2V2h4v2.2M3.2 6h3.6",
+  file: "M2.8 1.4h3.4l1.6 1.6v5.6h-5ZM3.8 4.2h3M3.8 5.6h3M3.8 7h2",
+  enemy: "M5 1.6a3 3 0 0 0-3 3v1.6l1 .8v1.6h4V7l1-.8V4.6a3 3 0 0 0-3-3ZM3.8 4.8v.6M6.2 4.8v.6",
+  person: "M5 1.6a1.6 1.6 0 1 0 .01 0M2 8.6a3 3 0 0 1 6 0",
+};
+/* floor links: a stair (or ladder, lift, hole) badge and where it leads; clicking it shows that floor and marks where you come out */
+function linkLabel(f, of) { const a = FLOOR.get(f), b = FLOOR.get(of), lv = b.lvl - a.lvl;
+  return (lv > 0 ? "↑ " : lv < 0 ? "↓ " : "→ ") + (a.area === b.area ? b.short : b.label); }
+function linkBox(f, t, of) { const w = 11.6 + linkLabel(f, of).length * 2.95; return [t[0] - w / 2, t[1] - 4, t[0] + w / 2, t[1] + 4]; }
+function linkGlyph(note) { const n = (note || "").toLowerCase(); return /ladder/.test(n) ? "ladder" : /lift|elevator/.test(n) ? "lift" : /hole|trapdoor|grave/.test(n) ? "hole" : "stairs"; }
+function linkWord(note) { return {ladder: "Ladder", lift: "Lift", hole: "Way down", stairs: "Stairs"}[linkGlyph(note)]; }
+function glyphPath(kind, x, y) { // drawn in an 8x8 box
+  if (kind === "ladder") return `M${x + 2.7} ${y + 1.3}v5.4M${x + 5.3} ${y + 1.3}v5.4M${x + 2.7} ${y + 2.7}h2.6M${x + 2.7} ${y + 4}h2.6M${x + 2.7} ${y + 5.3}h2.6`;
+  if (kind === "lift") return `M${x + 2} ${y + 1.4}h4v5.2h-4zM${x + 3.1} ${y + 3.4}l.9-1l.9 1M${x + 3.1} ${y + 4.6}l.9 1l.9-1`;
+  if (kind === "hole") return `M${x + 1.6} ${y + 5.6}a2.4 1.1 0 1 0 4.8 0a2.4 1.1 0 1 0-4.8 0M${x + 4} ${y + 1.2}v3M${x + 2.9} ${y + 3.1}l1.1 1.1l1.1-1.1`;
+  return `M${x + 1.3} ${y + 6.6}h1.6v-1.6h1.6v-1.6h1.6v-1.6h1.6`;
+}
+function jumpTo(f, room, p) { if (moved) return; hideTip(); S.floor = f; S.sel = room; S.arrive = {f, p, t: Date.now()}; fitView(); render(); }
+function drawLink(parent, f, t, of, look, glyph, tipHtml, go) {
+  const b = linkBox(f, t, of), o = off(f), x = b[0] + o[0], y = b[1] + o[1];
+  const g = el("g", {class: "xtag", tabindex: 0, role: "button", "aria-label": "Go to " + FLOOR.get(of).label}, parent);
+  el("rect", {class: "xlink " + look, x, y, width: b[2] - b[0], height: 8, rx: 2}, g);
+  el("rect", {class: "xglyph " + look, x: x + .6, y: y + .6, width: 6.8, height: 6.8, rx: 1.4}, g);
+  el("path", {class: "xglyph-ink", d: glyphPath(glyph, x, y)}, g);
+  el("text", {class: "xtxt", x: x + 9.4, y: y + 5.7}, g).textContent = linkLabel(f, of);
+  g.addEventListener("click", go); g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } });
+  g.addEventListener("pointermove", ev => showTipText(ev, tipHtml)); g.addEventListener("pointerleave", hideTip);
+}
+function curve(x1, y1, x2, y2) { const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - Math.max(20, Math.abs(x2 - x1) * .12); return `M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}`; }
+function doorLook(d) {
+  const open = [d.ab, d.ba].some(r => r && r.some(cl => clauseOk(cl, S.have, d, S.unlocked)));
+  const toks = [d.ab, d.ba].filter(Boolean).flat(2);
+  if (open) return toks.includes("@other") && !S.unlocked.has(d.i) ? "bolt" : "open";
+  return toks.some(x => x !== "@other" && TOK.get(x) && TOK.get(x).kind === "event") ? "event" : toks.every(x => x === "@other") ? "bolt" : "key";
+}
+function doorState(d) {
+  const reqs = [d.ab, d.ba].filter(Boolean).flat();
+  const plain = reqs.every(cl => cl.length === 0);
+  if (plain) return "free";
+  const toks = reqs.flat();
+  if (toks.length && toks.every(t => t === "@other")) return "other";
+  const keyLike = toks.some(t => t !== "@other" && TOK.get(t) && TOK.get(t).kind !== "event");
+  const open = [d.ab, d.ba].some(r => r && r.some(cl => clauseOk(cl, S.have, d, S.unlocked)));
+  return keyLike ? "key" + (open ? " open" : "") : "event";
+}
+function reqText(req) {
+  if (!req) return "no way through from this side";
+  if (req.some(cl => cl.length === 0)) return "open";
+  return req.map(cl => cl.map(t => t === "@other" ? "unlocked from the far side" : tokName(t)).join(" + ")).join(" or ");
+}
+function doorText(d) {
+  const A = ROOM.get(d.a), B = ROOM.get(d.b);
+  return `<b>${esc(A.name)} &harr; ${esc(B.name)}</b><br>${esc(A.short)} &rarr; ${esc(B.short)}: ${esc(reqText(d.ab))}<br>${esc(B.short)} &rarr; ${esc(A.short)}: ${esc(reqText(d.ba))}` + (d.note ? `<br><span class="sub">${esc(d.note)}</span>` : "");
+}
+const tip = $("#tip");
+function showTip(ev, r) {
+  const extra = S.colorby === "reach" ? (REACH.has(r.id) ? "reachable" : "not reachable now") :
+    S.colorby === "area" ? AREA.get(r.area).label : (metricValue(r, S.colorby) == null ? "n/a" : fmtMetric(metricValue(r, S.colorby), S.colorby));
+  const bg = bgSet("remake", r.id) || bgSet("re1", r.id);
+  showTipText(ev, `<b>${esc(r.name)}</b><br><span class="sub">${esc(floorsOf(r))} · ${esc(extra)}</span>` + (bg && S.show.bgtip ? `<div class="tipimg" style="${thumbCss(bg, 0)}"></div>` : ""));
+}
+function fmtMetric(v, c) { return c === "hub" ? (v * 100).toFixed(1) + "% of shortest paths" : c === "sphere" ? "layer " + v : c === "visits" ? v + " visits" : c === "save" ? v + " doors to a save room" : c === "enemy" ? v + " enemies" : v + " doors"; }
+function showTipText(ev, h) {
+  const box = $("#mapwrap").getBoundingClientRect(); tip.innerHTML = h; tip.hidden = false;
+  const x = ev.clientX - box.left + 14, y = ev.clientY - box.top + 12;
+  tip.style.left = Math.min(x, box.width - tip.offsetWidth - 6) + "px"; tip.style.top = Math.min(y, box.height - tip.offsetHeight - 6) + "px";
+}
+function hideTip() { tip.hidden = true; }
+function drawLegend() {
+  const L = $("#legend"); const c = S.colorby; let h = "";
+  if (c === "reach") h = `<div class="row"><span><i class="sw" style="background:var(--reach)"></i>reachable</span><span><i class="sw" style="background:var(--seen)"></i>walked</span><span><i class="sw" style="background:var(--locked)"></i>locked away</span></div>`;
+  else if (c === "area") h = `<div class="row">${D.areas.map(a => `<span><i class="sw" style="background:${a.color}"></i>${esc(a.label)}</span>`).join("")}</div>`;
+  else { const mx = metricMax(c); const lab = {sphere: "progression layer", visits: "visits on route", hub: "hub score", save: "doors to save room", enemy: "enemies", degree: "doors"}[c];
+    h = `<div class="row">${lab}: <span class="num">0</span><i class="ramp" style="background:linear-gradient(90deg,${RAMP.join(",")})"></i><span class="num">${c === "hub" ? (mx * 100).toFixed(0) + "%" : mx}</span><span><i class="sw" style="background:var(--room)"></i>never</span></div>`; }
+  const bar = c => `<svg width="14" height="7" aria-hidden="true"><rect x="1" y="1.5" width="12" height="4" rx="1" fill="${c}"/></svg>`;
+  if (S.show.doors) h += `<div class="row"><span>${bar("var(--door)")} door you can open</span><span>${bar("var(--blood)")} needs a key or item</span><span>${bar("var(--violet)")} needs a puzzle or event</span><span><svg width="14" height="7" aria-hidden="true"><rect x="1" y="1.5" width="12" height="4" rx="1" fill="var(--door)" stroke="var(--blood)" stroke-dasharray="2 1.2"/></svg> bolted on the far side</span><span><svg width="9" height="9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="3" fill="none" stroke="#a9bccf" stroke-dasharray="1.6 1.2"/></svg> open passage</span><span><svg width="14" height="9" aria-hidden="true"><g fill="var(--hatch)"><rect x="1" y="1" width="1" height="7"/><rect x="4" y="1" width="1" height="7"/><rect x="7" y="1" width="1" height="7"/><rect x="10" y="1" width="1" height="7"/></g></svg> stairs</span><span><svg width="34" height="11" viewBox="0 0 26 8.4" aria-hidden="true" style="vertical-align:-2px"><rect x=".2" y=".2" width="25.6" height="8" rx="2" fill="var(--raise)" stroke="var(--door)" stroke-width=".5"/><rect x=".8" y=".8" width="6.8" height="6.8" rx="1.4" fill="var(--door)"/><path d="${glyphPath("stairs", .2, .2)}" class="xglyph-ink"/><text x="9.6" y="5.9" class="xtxt">↑ 2F</text></svg> stairs, ladder or lift: click to go to that floor</span></div>`;
+  if (S.tab === "route" && S.show.route && (S.step >= 0 || S.routeLeg >= 0)) { const ln = (st, w, extra = "") => `<svg width="22" height="8" aria-hidden="true"><line x1="1" y1="4" x2="21" y2="4" stroke="${st}" stroke-width="${w}" ${extra}/></svg>`;
+    h += `<div class="row">${S.step >= 0 ? `<span>${ln("var(--route)", 1.6, 'opacity=".55"')} walked</span><span>${ln("var(--route)", 3)} rest of this leg</span>` : `<span>${ln("var(--route)", 3)} this leg</span>${S.otherWays ? `<span>${ln("#7fc6e6", 1.6, 'stroke-dasharray="4 3"')} other ways</span>` : ""}`}${S.routeRest ? `<span>${ln("var(--route)", 1.6, 'opacity=".35"')} before</span><span>${ln("#8da2b8", 1.2, 'opacity=".6"')} later</span>` : ""}<span><i class="sw" style="border-color:#f0c987;background:transparent"></i>rooms on this leg; the rest are dimmed</span></div>`; }
+  if (S.show.pins) h += `<div class="row ichips"><span>Items:</span>${ICAT.map(c => `<button class="lchip" data-icat="${c.id}" aria-pressed="${S.icats.has(c.id)}"><i class="isw${c.round ? " round" : ""}" style="border-color:${c.color}"></i>${esc(c.label)}</button>`).join("")}</div>`;
+  L.innerHTML = h;
+}
+$("#legend").addEventListener("click", ev => { const b = ev.target.closest("[data-icat]"); if (!b) return;
+  const k = b.dataset.icat; S.icats.has(k) ? S.icats.delete(k) : S.icats.add(k); draw(); });
+
+/* pan / zoom */
+let moved = false; const ptrs = new Map(); let pinch = null;
+function svgPoint(cx, cy) { const b = svg.getBoundingClientRect(); const v = S.view; const s = Math.max(v.w / b.width, v.h / b.height);
+  const ox = v.x + (v.w - b.width * s) / 2, oy = v.y + (v.h - b.height * s) / 2; return [ox + (cx - b.left) * s, oy + (cy - b.top) * s, s]; }
+function zoomAt(f, cx, cy) { cancelAnimationFrame(ANIM); const [px, py] = svgPoint(cx, cy); const v = S.view; v.x = px - (px - v.x) * f; v.y = py - (py - v.y) * f; v.w *= f; v.h *= f; applyView();
+  if (S.follow && S.step >= 0 && S.tab === "route") S.followW = v.w; }
+svg.addEventListener("wheel", ev => { ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY); }, {passive: false});
+svg.addEventListener("pointerdown", ev => { cancelAnimationFrame(ANIM); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]); moved = false;
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
+svg.addEventListener("pointermove", ev => {
+  if (!ptrs.has(ev.pointerId)) return; const last = ptrs.get(ev.pointerId); ptrs.set(ev.pointerId, [ev.clientX, ev.clientY]);
+  if (ptrs.size === 2 && pinch) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); zoomAt(pinch / d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); pinch = d; moved = true; return; }
+  const dx = ev.clientX - last[0], dy = ev.clientY - last[1];
+  if (Math.abs(dx) + Math.abs(dy) > 0) { if (!moved && Math.hypot(dx, dy) < 3) return; moved = true; svg.classList.add("dragging"); svg.setPointerCapture(ev.pointerId);
+    const s = svgPoint(0, 0)[2]; S.view.x -= dx * s; S.view.y -= dy * s; applyView(); hideTip(); }
+});
+const endPtr = ev => { ptrs.delete(ev.pointerId); if (ptrs.size < 2) pinch = null; svg.classList.remove("dragging"); setTimeout(() => { if (!ptrs.size) moved = false; }, 0); };
+svg.addEventListener("pointerup", endPtr); svg.addEventListener("pointercancel", endPtr);
+$("#z-in").onclick = () => { const b = svg.getBoundingClientRect(); zoomAt(1 / 1.3, b.left + b.width / 2, b.top + b.height / 2); };
+$("#z-out").onclick = () => { const b = svg.getBoundingClientRect(); zoomAt(1.3, b.left + b.width / 2, b.top + b.height / 2); };
+$("#z-fit").onclick = fitView;
+
+/* ---------- floors nav ---------- */
+function drawFloors() {
+  const nav = $("#floors"); let h = "";
+  for (const a of D.areaOrder) {
+    h += `<span class="fgroup"><span>${esc(a.label)}</span>` + a.floors.map(fid => { const f = FLOOR.get(fid);
+      const here = onFloor(ROOM.get(S.pos), fid) ? '<i class="dot" title="You are here"></i>' : "";
+      return `<button class="chip" data-f="${fid}" aria-pressed="${S.floor === fid}">${esc(f.short)}${here}</button>`; }).join("") + `</span>`;
+  }
+  h += `<span class="fgroup"><button class="chip" data-f="atlas" aria-pressed="${S.floor === "atlas"}">Whole estate</button></span>`;
+  nav.innerHTML = h;
+  nav.querySelectorAll("button").forEach(b => b.onclick = () => { S.floor = b.dataset.f; fitView(); render(); });
+}
+
+/* ---------- side panel ---------- */
+function selectRoom(id, refit) {
+  S.sel = id; const r = ROOM.get(id);
+  if (S.floor !== "atlas" && !onFloor(r, S.floor)) { S.floor = r.floor; refit = true; }
+  if (refit) fitView();
+  if (S.tab !== "explore" && S.tab !== "analysis") S.tab = "explore";
+  render();
+}
+function walk(e) {
+  S.unlocked.add(e.d.i); S.pos = e.to; S.trail.push(e.to); S.doorsWalked++;
+  if (S.auto) autoCollect();
+  return e.d.a === e.to ? e.d.fa : e.d.fb;
+}
+function follow(f) { if (S.floor !== "atlas" && !onFloor(ROOM.get(S.pos), S.floor)) { S.floor = f; fitView(); } }
+function goTo(id) {
+  const prev = reachFrom(S.pos, S.have, S.unlocked); const p = pathTo(prev, id); if (!p) return;
+  let f = S.floor; p.forEach(e => { f = walk(e); }); S.alt = null; follow(f);
+  render();
+}
+function autoCollect() {
+  let more = true;
+  while (more) { more = false;
+    for (const t of D.tokens) if ((t.room === S.pos || t.room == null) && !S.have.has(t.id) && t.id !== "closet-key" && tokOk(t, S.have, S.char)) { S.have.add(t.id); more = true; } }
+}
+function render() { drawFloors(); draw(); drawPane(); }
+
+function drawPane() {
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === S.tab));
+  const P = $("#pane");
+  P.innerHTML = {explore: paneExplore, route: paneRoute, keys: paneKeys, analysis: paneAnalysis, gallery: paneGallery}[S.tab]();
+  P.querySelectorAll("[data-lb]").forEach(n => n.addEventListener("click", ev => { ev.stopPropagation(); const [g, k, i] = n.dataset.lb.split("|"); openLB(g, k, +i); }));
+  P.querySelectorAll("[data-gal]").forEach(n => n.addEventListener("click", () => { S.galGame = n.dataset.gal; drawPane(); }));
+  P.querySelectorAll("[data-galf]").forEach(n => n.addEventListener("click", () => { S.galFilter = n.dataset.galf; drawPane(); }));
+  P.querySelectorAll("[data-room]").forEach(n => n.addEventListener("click", ev => { ev.stopPropagation(); selectRoom(n.dataset.room, true); }));
+  P.querySelectorAll("[data-go]").forEach(n => n.addEventListener("click", ev => { ev.stopPropagation(); goTo(n.dataset.go); }));
+  P.querySelectorAll("[data-walk]").forEach(n => n.addEventListener("click", () => { const e = OUT.get(S.pos)[+n.dataset.walk]; if (passable(e, S.have, S.unlocked)) { follow(walk(e)); render(); } }));
+  P.querySelectorAll("[data-take]").forEach(n => n.addEventListener("click", () => { S.have.add(n.dataset.take); render(); }));
+  P.querySelectorAll("[data-inv]").forEach(n => n.addEventListener("change", () => { n.checked ? S.have.add(n.dataset.inv) : S.have.delete(n.dataset.inv); render(); }));
+  P.querySelectorAll("[data-act]").forEach(n => n.addEventListener("click", () => ACT[n.dataset.act](n)));
+  P.querySelectorAll("[data-leg]").forEach(n => n.addEventListener("click", () => { playStop(); const i = +n.dataset.leg;
+    S.routeLeg = i === S.routeLeg && S.step < 0 ? -1 : i; S.step = -1;
+    let jump = false;
+    if (S.routeLeg >= 0) { runTo(LEGSPAN[i][0]); stepColors(); if (S.floor !== "atlas") { jump = S.floor !== legFloor(i); S.floor = legFloor(i); fitView(); } } else if (S.colorby === "reach") { S.colorby = "visits"; $("#colorby").value = "visits"; }
+    render(); P.scrollTop = 0; if (S.follow && S.routeLeg >= 0) moveView(legView(i), jump); }));
+  P.querySelectorAll("[data-way]").forEach(n => n.addEventListener("click", () => { const i = S.routeLeg, k = +n.dataset.way;
+    k ? S.legAlt.set(i, k) : S.legAlt.delete(i); const stepping = S.step >= 0; buildSteps(); if (stepping) { S.step = LEGSPAN[i][0]; runTo(S.step); } render(); }));
+  P.querySelectorAll("[data-step]").forEach(n => n.addEventListener("click", () => setStep(+n.dataset.step, S.routeLeg)));
+  const sa = P.querySelector("#stepauto"); if (sa) sa.onchange = () => { S.auto = sa.checked; if (S.step >= 0) runTo(S.step); render(); };
+  const rr = P.querySelector("#routerest"); if (rr) rr.onchange = () => { S.routeRest = rr.checked; draw(); };
+  const fo = P.querySelector("#follow"); if (fo) fo.onchange = () => { S.follow = fo.checked; if (S.follow && S.step >= 0) moveView(roomView(STEPS[S.step])); };
+  const ow = P.querySelector("#otherways"); if (ow) ow.onchange = () => { S.otherWays = ow.checked; draw(); };
+  const sc = P.querySelector("#scrub"); if (sc) { // drag: move along the map at once, rebuild the pane when let go
+    sc.oninput = () => { S.step = +sc.value; const s = STEPS[S.step]; S.routeLeg = s.leg; runTo(S.step); stepColors(); const jump = S.floor !== "atlas" && !onFloor(ROOM.get(s.room), S.floor); if (jump) { S.floor = s.f; fitView(); } $("#stepinfo").innerHTML = stepInfo(); const ll = P.querySelector(".legline"); if (ll) ll.outerHTML = legLine(); draw(); if (S.follow) moveView(roomView(s), jump); };
+    sc.onchange = () => render(); }
+  const on = P.querySelector("[data-leg].on"); if (on && S.step >= 0) { const a = on.getBoundingClientRect(), b = P.getBoundingClientRect(); if (a.top < b.top + 150 || a.bottom > b.bottom) P.scrollTop += a.top - b.top - 220; }
+  P.querySelectorAll("[data-lock]").forEach(n => n.addEventListener("click", () => { S.lockSel = S.lockSel === n.dataset.lock ? null : n.dataset.lock; render(); }));
+  P.querySelectorAll("[data-sort]").forEach(n => n.addEventListener("click", () => { if (S.sortKey === n.dataset.sort) S.sortDir *= -1; else { S.sortKey = n.dataset.sort; S.sortDir = -1; } render(); }));
+  const lr = P.querySelector("#layer"); if (lr) { lr.oninput = () => { $("#layerv").textContent = +lr.value < 0 ? "–" : lr.value; }; lr.onchange = () => ACT.fill(lr); }
+  const ap = P.querySelector("#auto"); if (ap) ap.onchange = () => { S.auto = ap.checked; if (S.auto) autoCollect(); render(); };
+}
+const ACT = {
+  reset() { resetRun(); render(); },
+  undo() { if (S.trail.length < 2) return; S.trail.pop(); S.pos = S.trail[S.trail.length - 1]; S.doorsWalked = Math.max(0, S.doorsWalked - 1); render(); },
+  fill(n) { const upto = +n.value; S.layerFill = upto; S.have = startHave(S.char); for (const [t, s] of SP.tokS) if (s <= upto) S.have.add(t); render(); },
+  allkeys() { SP.tokS.forEach((s, t) => S.have.add(t)); S.layerFill = SP.layers.length - 1; render(); },
+  nokeys() { S.have = startHave(S.char); S.layerFill = -1; render(); },
+  alt(n) { const to = S.sel; const ps = kPaths(S.pos, to, S.have, S.unlocked, 3); S.alt = ps.length ? ps : null; if (S.floor !== "atlas") { S.floor = "atlas"; fitView(); } render(); },
+  clearalt() { S.alt = null; render(); },
+  setpos() { S.pos = S.sel; S.trail.push(S.sel); S.alt = null; if (S.auto) autoCollect(); render(); },
+  routekind(n) { S.routeKind = n.dataset.k; S.routeLeg = -1; recompute(); render(); },
+  playroute() { ACT.reset(); const auto = S.auto; S.auto = false; for (const l of ROUTE.legs) { if (l.blocked) break; l.path.forEach(walk); S.have.add(l.tok); } S.auto = auto; S.tab = "explore"; S.floor = ROOM.get(S.pos).floor; fitView(); render(); },
+  stepnext() { setStep(S.step < 0 ? (S.routeLeg >= 0 ? LEGSPAN[S.routeLeg][0] : 0) : S.step + 1); },
+  stepprev() { setStep(S.step < 0 ? (S.routeLeg >= 0 ? LEGSPAN[S.routeLeg][0] : 0) : S.step - 1); },
+  legnext() { if (S.step < 0) return setStep(S.routeLeg >= 0 ? LEGSPAN[S.routeLeg][1] : LEGSPAN[0][1]);
+    const s1 = LEGSPAN[S.routeLeg][1]; setStep(S.step < s1 ? s1 : LEGSPAN[Math.min(S.routeLeg + 1, LEGSPAN.length - 1)][1]); },
+  legprev() { if (S.step < 0) return setStep(S.routeLeg >= 0 ? LEGSPAN[S.routeLeg][0] : 0);
+    const s0 = LEGSPAN[S.routeLeg][0]; setStep(S.step > s0 ? s0 : LEGSPAN[Math.max(S.routeLeg - 1, 0)][0]); },
+  play() {
+    if (PLAY) { playStop(); drawPane(); return; }
+    if (S.step < 0 || S.step >= STEPS.length - 1) setStep(S.step < 0 && S.routeLeg >= 0 ? LEGSPAN[S.routeLeg][0] : 0);
+    PLAY = setInterval(() => { if (S.tab !== "route" || S.step >= STEPS.length - 1) { playStop(); render(); return; } setStep(S.step + 1); }, 650);
+    drawPane();
+  },
+  routeall() { playStop(); S.step = -1; S.routeLeg = -1; if (S.colorby === "reach") { S.colorby = "visits"; $("#colorby").value = "visits"; } if (S.floor !== "atlas") { S.floor = "atlas"; fitView(); } render(); },
+};
+// Route stepper: one room at a time along the chosen ways; the map switches floor when the room is not on the one shown.
+let PLAY = null;
+function playStop() { clearInterval(PLAY); PLAY = null; }
+function legFloor(i) { // the floor most of a leg's rooms are on
+  const [s0, s1] = LEGSPAN[i], n = new Map(); let best = STEPS[s1].f;
+  for (const s of STEPS.slice(s0, s1 + 1)) n.set(s.f, (n.get(s.f) || 0) + 1);
+  for (const [f, c] of n) if (c > n.get(best)) best = f;
+  return best;
+}
+function setStep(k, leg) {
+  if (!STEPS.length) return;
+  S.step = Math.max(0, Math.min(STEPS.length - 1, k)); const s = STEPS[S.step]; S.routeLeg = leg != null ? leg : s.leg;
+  runTo(S.step); stepColors();
+  const jump = S.floor !== "atlas" && !onFloor(ROOM.get(s.room), S.floor); // another floor map: snap, a glide would point the wrong way
+  if (jump) { S.floor = s.f; fitView(); }
+  render();
+  if (S.follow) moveView(roomView(s), jump);
+}
+// Where you stand, what you carry and which bolts are open after walking the route to step k: the route's objectives,
+// plus (with "pick up items as I walk") any key, item or weapon you can take in a room you pass. Explore shows the same run.
+function runTo(k) {
+  const have = startHave(S.char), unlocked = new Set(), trail = [STEPS[0].room]; let doors = 0, before = null;
+  for (let i = 0; i <= k; i++) { const s = STEPS[i]; if (i === k) before = new Set(have);
+    if (s.e) { unlocked.add(s.e.d.i); trail.push(s.room); doors++; }
+    s.toks.forEach(t => have.add(t));
+    if (S.auto) for (let more = true; more;) { more = false;
+      for (const t of D.tokens) if (t.room === s.room && t.kind !== "event" && t.id !== "closet-key" && !have.has(t.id) && tokOk(t, have, S.char)) { have.add(t.id); more = true; } }
+  }
+  Object.assign(S, {have, unlocked, trail, pos: STEPS[k].room, doorsWalked: doors, alt: null, layerFill: -1, stepGot: [...have].filter(t => !before.has(t) && TOK.has(t))});
+}
+function stepColors() { if (S.colorby === "visits") { S.colorby = "reach"; $("#colorby").value = "reach"; } } // a leg in focus: colour by what is open at that point
+document.addEventListener("keydown", ev => {
+  if (LB || S.tab !== "route" || ev.altKey || ev.ctrlKey || ev.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(ev.target.tagName)) return;
+  if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+  ev.preventDefault(); const fwd = ev.key === "ArrowRight";
+  ACT[ev.shiftKey ? (fwd ? "legnext" : "legprev") : (fwd ? "stepnext" : "stepprev")]();
+});
+
+function roomLink(id) { const r = ROOM.get(id); return `<a href="#" data-room="${id}" style="color:inherit">${esc(r.name)}</a>`; }
+function tokTag(id) { const t = TOK.get(id); return `<span class="tag ${t.kind === "event" ? "ev" : "am"}">${esc(t.name)}</span>`; }
+
+function paneExplore() {
+  const here = ROOM.get(S.pos); const sel = S.sel ? ROOM.get(S.sel) : null;
+  let h = `<h2>You are in the ${esc(here.name)}</h2><p class="sub">${esc(floorsOf(here))} · ${S.char === "jill" ? "Jill" : "Chris"} · walked ${S.doorsWalked} door${S.doorsWalked === 1 ? "" : "s"} through ${new Set(S.trail).size} room${new Set(S.trail).size === 1 ? "" : "s"}</p>`;
+  h += `<h3>Doors from here</h3><ul class="list">`;
+  OUT.get(S.pos).forEach((e, i) => { const ok = passable(e, S.have, S.unlocked); const to = ROOM.get(e.to);
+    h += `<li class="${ok ? "click" : ""}" ${ok ? `data-walk="${i}"` : ""}><span class="grow">${esc(to.name)}${!to.outlines.some(x => onFloor(here, x.floor)) ? ` <span class="sub">(${esc(FLOOR.get(to.floor).label)})</span>` : ""}${ok ? "" : `<br><span class="sub warn">needs ${esc(missingFor(e, S.have, S.unlocked).map(t => t === "@other" ? "unlocking from the far side" : tokName(t)).join(" + "))}</span>`}</span>${ok ? `<span class="tag ok">go</span>` : `<span class="tag bad">locked</span>`}</li>`; });
+  h += `</ul>`;
+  const here_t = D.tokens.filter(t => t.room === S.pos && t.chars.includes(S.char));
+  if (here_t.length) { h += `<h3>To do here</h3><ul class="list">`;
+    for (const t of here_t) { const got = S.have.has(t.id); const ok = tokOk(t, S.have, S.char);
+      const ic = itemCss(t.img);
+      h += `<li>${ic ? `<span class="thumb lg" style="${ic}" role="img" aria-label="${esc(t.name)}"></span>` : ""}<span class="grow">${esc(t.name)}<br><span class="sub">${esc(t.note || "")}</span>${got || ok ? "" : `<br><span class="sub warn">needs ${esc(t.req.map(cl => cl.filter(x => !S.have.has(x)).map(tokName).join(" + ")).join(" or "))}</span>`}</span>${got ? `<span class="tag ok">done</span>` : ok ? `<button class="btn primary" data-take="${t.id}">${t.kind === "event" ? "Do" : "Take"}</button>` : `<span class="tag bad">not yet</span>`}</li>`; }
+    h += `</ul>`; }
+  const combos = D.tokens.filter(t => t.room == null && t.chars.includes(S.char) && !S.have.has(t.id) && tokOk(t, S.have, S.char));
+  if (combos.length) h += `<h3>Can be made from what you carry</h3><ul class="list">${combos.map(t => `<li><span class="grow">${esc(t.name)}<br><span class="sub">${esc(t.note || "")}</span></span><button class="btn primary" data-take="${t.id}">Combine</button></li>`).join("")}</ul>`;
+  h += `<div class="btnrow"><button class="btn" data-act="undo">Step back</button><button class="btn" data-act="reset">Restart</button><label class="toggle"><input type="checkbox" id="auto" ${S.auto ? "checked" : ""}> pick things up as I walk</label></div>`;
+  h += `<p class="note">Click a room on the map to inspect it, then "Walk there". Doors and stair tags on the map show their locks; hover them for detail.</p>`;
+  if (sel) h += roomCard(sel);
+  h += `<h3>Inventory and events (${[...S.have].filter(t => TOK.has(t)).length})</h3><p class="note">Tick anything to test a what-if. Rooms recolour at once.</p>`;
+  h += `<div class="btnrow"><button class="btn" data-act="nokeys">Empty</button><button class="btn" data-act="allkeys">Everything</button></div>`;
+  h += `<label class="toggle" for="layer" style="display:flex;gap:10px;align-items:center;margin:4px 0 2px">Everything up to layer <b class="num" id="layerv">${S.layerFill < 0 ? "–" : S.layerFill}</b><input type="range" id="layer" min="-1" max="${SP.layers.length - 1}" value="${S.layerFill}" style="flex:1;accent-color:var(--amber)"></label><p class="note">Drag to load the inventory a player would have at that point in the progression.</p>`;
+  for (const g of D.tokenGroups) {
+    const items = D.tokens.filter(t => t.group === g.id); if (!items.length) continue;
+    h += `<h3 style="margin-top:10px">${esc(g.label)}</h3><div class="inv">` + items.map(t => `<label class="${t.chars.includes(S.char) ? "" : "na"}" title="${esc(t.name + " — " + (t.room ? ROOM.get(t.room).name : "made by combining items"))}"><input type="checkbox" data-inv="${t.id}" ${S.have.has(t.id) ? "checked" : ""}><span>${esc(t.name)}</span></label>`).join("") + `</div>`;
+  }
+  return h + credit();
+}
+function roomCard(r) {
+  const reach = REACH.has(r.id); const p = reach ? pathTo(REACH, r.id) : null;
+  let h = `<h3>Selected room</h3><h2>${esc(r.name)}</h2><p class="sub">${esc(floorsOf(r))} · ${esc(AREA.get(r.area).label)}${r.save ? " · save room" : ""}${METRIC.art.has(r.id) ? " · chokepoint" : ""}</p>`;
+  h += `<div class="stats"><div class="stat"><b>${NEIGH.get(r.id).size}</b><span>doors</span></div><div class="stat"><b>${(METRIC.bc.get(r.id) * 100).toFixed(1)}</b><span>hub score %</span></div><div class="stat"><b>${METRIC.save.has(r.id) ? METRIC.save.get(r.id) : "–"}</b><span>to save room</span></div><div class="stat"><b>${SP.roomS.has(r.id) ? SP.roomS.get(r.id) : "–"}</b><span>layer</span></div></div>`;
+  h += `<div class="btnrow">` + (r.id === S.pos ? `<span class="tag am">you are here</span>` : reach ? `<button class="btn primary" data-go="${r.id}">Walk there (${p.length} doors)</button><button class="btn" data-act="alt">Show 3 routes</button>` : `<span class="tag bad">can't reach it now</span>`) + `<button class="btn" data-act="setpos">Teleport here</button>${S.alt ? `<button class="btn" data-act="clearalt">Hide routes</button>` : ""}</div>`;
+  if (S.alt) h += `<p class="note">${S.alt.map((p, k) => `<span class="tag ${k ? "" : "am"}">route ${k + 1}: ${p.length} doors</span>`).join(" ")} Shown on the whole-estate view.</p>`;
+  h += gallery(r);
+  if (!reach) { const need = needs("room:" + r.id, S.char);
+    h += need ? `<p class="sub">Smallest set of items and events that opens it from the start: ${need.map(tokTag).join(" ")}</p>` : `<p class="sub warn">Not reachable as ${S.char === "jill" ? "Jill" : "Chris"} in this model.</p>`; }
+  h += `<h3>Doors</h3><ul class="list">`;
+  for (const d of D.doors) { if (d.a !== r.id && d.b !== r.id) continue; const o = d.a === r.id ? d.b : d.a; const req = d.a === r.id ? d.ab : d.ba; const back = d.a === r.id ? d.ba : d.ab;
+    h += `<li class="click" data-room="${o}"><span class="grow">${esc(ROOM.get(o).name)}${!ROOM.get(o).outlines.some(x => onFloor(r, x.floor)) ? ` <span class="sub">(${esc(FLOOR.get(ROOM.get(o).floor).label)})</span>` : ""}<br><span class="sub">out: ${esc(reqText(req))}; in: ${esc(reqText(back))}${d.note ? "; " + esc(d.note) : ""}</span></span></li>`; }
+  h += `</ul>`;
+  const toks = D.tokens.filter(t => t.room === r.id);
+  if (toks.length) h += `<h3>Progression here</h3><ul class="list">${toks.map(t => `<li><span class="grow">${esc(t.name)} <span class="sub">${t.chars.length === 1 ? "(" + t.chars[0] + " only)" : ""}</span><br><span class="sub">${esc(t.note || "")}${t.req.some(cl => cl.length) ? " Needs: " + esc(t.req.map(cl => cl.map(tokName).join(" + ")).join(" or ")) : ""}</span></span>${SP.tokS.has(t.id) ? `<span class="tag">layer ${SP.tokS.get(t.id)}</span>` : ""}</li>`).join("")}</ul>`;
+  const m = MODES.indexOf(mode()); const cs = r.contents.filter(c => (c.m >> m) & 1);
+  cs.sort((a, b) => ICAT.indexOf(ICATM.get(a.c)) - ICAT.indexOf(ICATM.get(b.c)));
+  h += `<h3>Contents (${S.char === "jill" ? "Jill" : "Chris"}, ${$("#diff").selectedOptions[0].text})</h3>`;
+  h += cs.length ? cs.map(c => { const ic = itemCss(c.s), cat = ICATM.get(c.c); return `<div class="content-item ci">${ic ? `<span class="thumb cat" style="${ic};border-color:${cat.color}" role="img" aria-label="${esc(c.t)}"></span>` : ""}<span><span class="tag" style="border-color:${cat.color}">${esc(cat.tag)}</span> <b>${esc(c.t)}</b>${c.d ? `<br><span class="sub">${esc(c.d)}</span>` : ""}</span></div>`; }).join("") : `<p class="note">Nothing listed for this mode.</p>`;
+  return h;
+}
+function areaStrip(edges) {
+  const cols = edges.map(e => AREA.get(ROOM.get(e.to).area).color);
+  return `<div class="strip" title="Area you are in, door by door">${cols.map(c => `<i style="flex:1;background:${c}"></i>`).join("")}</div>`;
+}
+function stepInfo() {
+  const k = S.step, s = k >= 0 ? STEPS[k] : null;
+  if (!s) return `<p class="note">Step through the route room by room with the buttons, the slider or the arrow keys (Shift + arrow for a whole leg), or press Play. The map follows you from floor to floor.</p>`;
+  const r = ROOM.get(s.room), l = ROUTE.legs[s.leg], s1 = LEGSPAN[s.leg][1], nx = STEPS[k + 1];
+  let h = `<p><b>${esc(r.name)}</b> <span class="sub">${esc(FLOOR.get(s.f).label)} · ${s.e ? "in from the " + esc(ROOM.get(s.e.from).name) : k ? "stay here" : "start"}${nx && nx.e && nx.leg === s.leg ? " · next: " + esc(ROOM.get(nx.room).name) : ""}</span></p>`;
+  h += `<p class="sub">Leg ${s.leg + 1} of ${ROUTE.legs.length}: <b style="color:var(--text)">${esc(TOK.get(l.tok).name)}</b> in the ${esc(ROOM.get(l.to).name)} · ${k >= s1 ? "you are there" : (s1 - k) + (s1 - k === 1 ? " room" : " rooms") + " to go"}</p>`;
+  if (S.stepGot.length) h += `<p>${S.stepGot.map(tokTag).join(" ")} <span class="sub">picked up here · carrying ${[...S.have].filter(t => TOK.has(t) && TOK.get(t).kind !== "event").length}</span></p>`;
+  return h;
+}
+function legLine() { // the active leg as a row of rooms, like a timeline; click one to step there
+  if (S.routeLeg < 0) return "";
+  const [s0, s1] = LEGSPAN[S.routeLeg];
+  return `<div class="legline">` + STEPS.slice(s0, s1 + 1).map((s, j) => { const k = s0 + j;
+    const cls = (k === S.step ? " now" : S.step >= 0 && k < S.step ? " done" : "") + (k === s1 ? " goal" : "");
+    return `<button class="lstop${cls}" data-step="${k}" title="${k === s1 ? "Objective: " + esc(TOK.get(ROUTE.legs[S.routeLeg].tok).name) : "Step here"}">${esc(ROOM.get(s.room).name)}</button>`; }).join(`<span class="arr">&rsaquo;</span>`) + `</div>`;
+}
+function stepper() {
+  const N = STEPS.length, k = S.step;
+  return `<div class="stepper"><div class="btnrow">` +
+    `<button class="btn" data-act="legprev" title="Back to the previous objective (Shift+←)" aria-label="Previous objective">&#x23EE;</button>` +
+    `<button class="btn" data-act="stepprev" title="Previous room (←)" aria-label="Previous room">&#x25C0;</button>` +
+    `<button class="btn primary" data-act="play" style="min-width:76px">${PLAY ? "&#10074;&#10074; Pause" : "&#x25B6; Play"}</button>` +
+    `<button class="btn" data-act="stepnext" title="Next room (→)" aria-label="Next room">&#x25B6;</button>` +
+    `<button class="btn" data-act="legnext" title="On to the next objective (Shift+→)" aria-label="Next objective">&#x23ED;</button>` +
+    (k >= 0 || S.routeLeg >= 0 ? `<button class="btn" data-act="routeall" title="Show the whole route">Whole route</button>` : "") +
+    `<span class="num sub" style="margin-left:auto">${k >= 0 ? `room ${k + 1} / ${N}` : `${N} rooms`}</span></div>` +
+    `<input type="range" id="scrub" min="0" max="${N - 1}" value="${Math.max(0, k)}" aria-label="Position along the route"><div id="stepinfo">${stepInfo()}</div>${legLine()}` +
+    `<div class="toggles"><label class="toggle"><input type="checkbox" id="stepauto" ${S.auto ? "checked" : ""}> pick up items as I walk</label><label class="toggle"><input type="checkbox" id="routerest" ${S.routeRest ? "checked" : ""}> show the rest of the route</label><label class="toggle" title="Pan and zoom to each room as you step; your zoom is kept"><input type="checkbox" id="follow" ${S.follow ? "checked" : ""}> camera follows</label></div></div>`;
+}
+function viaRooms(p, base) { const b = new Set(base.map(e => e.to)); return [...new Set(p.map(e => e.to).filter(r => !b.has(r)))]; }
+function waysHtml(i) {
+  const l = ROUTE.legs[i], ways = legWays(i), pick = S.legAlt.get(i) || 0;
+  let h = `<h3>Ways from the ${esc(ROOM.get(l.from).name)} to the ${esc(ROOM.get(l.to).name)}</h3>`;
+  if (ways.length < 2) return h + `<p class="note">${l.path.length ? "Only one way there without doubling back, with what you hold at this point." : "Nothing to walk: this happens where you stand."}</p>`;
+  h += `<div class="ways">` + ways.map((p, k) => { const via = viaRooms(p, ways[0]);
+    return `<button class="way" data-way="${k}" aria-pressed="${k === pick}"><i style="background:${WAYC[k]}"></i><span><b>${k ? "Way " + (k + 1) : "Shortest"}</b> · ${p.length} doors${k ? `<br><span class="sub">${via.length ? "via " + via.slice(0, 4).map(id => esc(ROOM.get(id).name)).join(", ") + (via.length > 4 ? " +" + (via.length - 4) : "") : "same rooms, another door"}</span>` : ""}</span></button>`; }).join("") + `</div>`;
+  h += `<label class="toggle"><input type="checkbox" id="otherways" ${S.otherWays ? "checked" : ""}> show the other ways on the map</label>`;
+  return h + `<p class="note">With the keys and events you hold at this point. Picking a way makes the room-by-room steps follow it.</p>`;
+}
+function paneRoute() {
+  const legs = ROUTE.legs; const all = legs.flatMap((l, i) => legPath(i));
+  const uniq = new Set([D.start[S.char], ...all.map(e => e.to)]);
+  const rev = [...ROUTE.visits.values()].filter(v => v > 1).length;
+  const maxV = Math.max(...ROUTE.visits.values());
+  const top = [...ROUTE.visits.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  let h = stepper() + `<h2>${S.char === "jill" ? "Jill" : "Chris"}'s route</h2>`;
+  if (S.routeLeg >= 0) h += waysHtml(S.routeLeg);
+  h += `<div class="seg" style="margin:4px 0 8px"><button data-act="routekind" data-k="guide" aria-pressed="${S.routeKind === "guide"}">Walkthrough order</button><button data-act="routekind" data-k="greedy" aria-pressed="${S.routeKind === "greedy"}">Nearest-next (essentials only)</button></div>`;
+  h += `<p class="note">${S.routeKind === "guide" ? "Objectives in the order the guides play them; each leg takes the fewest doors from where the last one ended." : "Only what the ending needs. At each step it goes for the closest objective it can already get, so it shows how far the game lets you deviate."}</p>`;
+  h += `<div class="stats"><div class="stat"><b>${all.length}</b><span>doors</span></div><div class="stat"><b>${uniq.size}</b><span>rooms seen</span></div><div class="stat"><b>${rev}</b><span>revisited</span></div><div class="stat"><b>${(all.length / uniq.size).toFixed(1)}</b><span>doors / room</span></div></div>`;
+  h += areaStrip(all) + `<div class="row note" style="display:flex;flex-wrap:wrap;gap:4px 10px">${D.areas.map(a => `<span><i class="sw" style="background:${a.color}"></i>${esc(a.label)}</span>`).join("")}</div>`;
+  h += `<h3>Most-crossed rooms</h3><ul class="list">${top.map(([id, v]) => `<li class="click" data-room="${id}"><span class="grow">${esc(ROOM.get(id).name)}</span><span style="width:90px"><div class="bar" style="width:${v / maxV * 100}%"></div></span><span class="num">${v}</span></li>`).join("")}</ul>`;
+  h += `<div class="btnrow"><button class="btn" data-act="playroute">Walk the whole route in Explore</button></div>`;
+  h += `<h3>Legs (${legs.length})</h3><ul class="list steps">`;
+  legs.forEach((l, i) => { const t = TOK.get(l.tok);
+    const nw = legWays(i).length, pk = S.legAlt.get(i);
+    h += `<li class="click ${S.routeLeg === i ? "on" : ""}" data-leg="${i}"><span class="n">${i + 1}</span><span class="grow">${esc(t.name)}<br><span class="sub">${esc(ROOM.get(l.to).name)} · ${legPath(i).length} doors${nw > 1 ? ` · ${pk ? `<span style="color:${WAYC[pk]}">way ${pk + 1}</span> of ${nw}` : nw + " ways"}` : ""}${l.blocked ? ` · <span class="warn">blocked: ${esc(l.missing)}</span>` : ""}</span></span>${SP.tokS.has(l.tok) ? `<span class="tag">L${SP.tokS.get(l.tok)}</span>` : ""}</li>`; });
+  return h + `</ul>` + credit();
+}
+function lockList() {
+  const m = new Map();
+  D.doors.forEach(d => [d.ab, d.ba].forEach(req => req && req.forEach(cl => cl.forEach(t => { if (t === "@other") return; if (!m.has(t)) m.set(t, new Set()); m.get(t).add(d.i); }))));
+  return m;
+}
+const LOCKS = lockList();
+const BEHIND = new Map();
+function behind(t) { const k = S.char + t; if (!BEHIND.has(k)) { const sp = spheres(S.char, new Set([t])); BEHIND.set(k, D.rooms.filter(r => SP.roomS.has(r.id) && !sp.roomS.has(r.id)).map(r => r.id)); } return BEHIND.get(k); }
+function paneKeys() {
+  let h = `<h2>Locks and what they hold back</h2><p class="note">Every key, item or event that bars a door. "Rooms behind it" counts the rooms you could never reach if that one thing were missing, everything else allowed.</p>`;
+  const rows = [...LOCKS.entries()].map(([t, doors]) => ({t, doors: [...doors], behind: TOK.has(t) ? behind(t) : [], s: SP.tokS.get(t)}));
+  rows.sort((a, b) => (a.s ?? 99) - (b.s ?? 99) || b.behind.length - a.behind.length);
+  h += `<table class="t"><thead><tr><th>Lock</th><th class="num">doors</th><th class="num">rooms behind it</th><th class="num">layer</th></tr></thead><tbody>`;
+  for (const r of rows) h += `<tr class="click ${S.lockSel === r.t ? "on" : ""}" data-lock="${r.t}"><td>${esc(tokName(r.t))}</td><td class="num">${r.doors.length}</td><td class="num">${r.behind.length}</td><td class="num">${r.s ?? "–"}</td></tr>`;
+  h += `</tbody></table>`;
+  if (S.lockSel) { const t = TOK.get(S.lockSel); const doors = LOCKS.get(S.lockSel);
+    h += `<h3>${esc(tokName(S.lockSel))}</h3>`;
+    if (t && itemCss(t.img)) h += `<span class="thumb lg" style="${itemCss(t.img)};display:block;width:150px;margin:4px 0" role="img" aria-label="${esc(t.name)}"></span>`;
+    if (t) { h += `<p>Found: ${t.room ? roomLink(t.room) : "made by combining items"}${t.note ? ` <span class="sub">— ${esc(t.note)}</span>` : ""}</p>`;
+      const nd = needs(S.lockSel, S.char); if (nd) h += `<p class="sub">Needs first: ${nd.length ? nd.map(tokTag).join(" ") : "nothing"}</p>`; }
+    h += `<ul class="list">${[...doors].map(i => { const d = D.doors[i]; return `<li class="click" data-room="${d.a}"><span class="grow">${esc(ROOM.get(d.a).name)} &harr; ${esc(ROOM.get(d.b).name)}</span></li>`; }).join("")}</ul>`;
+    const b = behind(S.lockSel); if (b.length) h += `<h3>Rooms behind it (${b.length})</h3><p class="sub">${b.map(roomLink).join(", ")}</p>`;
+  }
+  h += `<h3>Progression layers (${S.char === "jill" ? "Jill" : "Chris"})</h3><p class="note">Layer 0 is what you can reach at the start; each layer adds every item and event the previous one made reachable. Colour the map by "Progression layer" to see them.</p><ul class="list">`;
+  for (const l of SP.layers) h += `<li><span class="n num" style="min-width:24px">${l.s}</span><span class="grow"><span class="sub">${l.rooms.length} new rooms</span><br>${l.tokens.map(tokTag).join(" ")}</span></li>`;
+  return h + `</ul>` + credit();
+}
+function paneAnalysis() {
+  const n = D.rooms.length, e = D.doors.length;
+  const comps = new Map(); D.areas.forEach(a => comps.set(a.id, {rooms: 0, doors: 0}));
+  D.rooms.forEach(r => comps.get(r.area).rooms++);
+  D.doors.forEach(d => { const A = ROOM.get(d.a).area; if (A === ROOM.get(d.b).area) comps.get(A).doors++; });
+  const dead = D.rooms.filter(r => NEIGH.get(r.id).size === 1).length;
+  const locked = D.doors.filter(d => doorState(d) !== "free").length;
+  const oneway = D.doors.filter(d => !d.ab || !d.ba).length;
+  let h = `<h2>Level structure</h2><p class="note">Locks ignored here: this is the shape of the building itself.</p>`;
+  h += `<div class="stats"><div class="stat"><b>${n}</b><span>rooms</span></div><div class="stat"><b>${e}</b><span>doors</span></div><div class="stat"><b>${e - n + 1}</b><span>loops</span></div><div class="stat"><b>${dead}</b><span>dead ends</span></div></div>`;
+  h += `<div class="stats"><div class="stat"><b>${locked}</b><span>gated doors</span></div><div class="stat"><b>${oneway}</b><span>one-way</span></div><div class="stat"><b>${SAVE.size}</b><span>save rooms</span></div><div class="stat"><b>${METRIC.art.size}</b><span>chokepoints</span></div></div>`;
+  h += `<h3>By area</h3><table class="t"><thead><tr><th>Area</th><th class="num">rooms</th><th class="num">doors inside</th><th class="num">loops</th><th class="num">save rooms</th></tr></thead><tbody>`;
+  for (const a of D.areas) { const c = comps.get(a.id); const sv = D.rooms.filter(r => r.area === a.id && r.save).length;
+    h += `<tr><td><i class="sw" style="background:${a.color}"></i>${esc(a.label)}</td><td class="num">${c.rooms}</td><td class="num">${c.doors}</td><td class="num">${Math.max(0, c.doors - c.rooms + 1)}</td><td class="num">${sv}</td></tr>`; }
+  h += `</tbody></table><p class="note">Loops = doors − rooms + 1 inside the area: how many independent circuits it has. A tree of corridors has none; the mansion is built on circuits so you can route around a zombie.</p>`;
+  const cols = [["name", "Room"], ["hub", "hub %"], ["deg", "doors"], ["save", "to save"], ["enemy", "enemies"], ["layer", "layer"], ["visits", "route visits"]];
+  const rows = D.rooms.map(r => ({id: r.id, name: r.name, hub: METRIC.bc.get(r.id), deg: NEIGH.get(r.id).size, save: METRIC.save.get(r.id) ?? 99, enemy: enemies(r, mode()), layer: SP.roomS.get(r.id) ?? 99, visits: ROUTE.visits.get(r.id) || 0}));
+  rows.sort((a, b) => { const k = S.sortKey; return (a[k] < b[k] ? -1 : a[k] > b[k] ? 1 : 0) * S.sortDir; });
+  h += `<h3>Every room</h3><p class="note">Hub % is the share of all room-to-room shortest paths that pass through the room. Chokepoints (marked ◆) split the estate in two if removed. Click a header to sort.</p>`;
+  h += `<div class="tablebox"><table class="t"><thead><tr>${cols.map(([k, l]) => `<th class="${k === "name" ? "" : "num"}" data-sort="${k}">${l}${S.sortKey === k ? (S.sortDir < 0 ? " ↓" : " ↑") : ""}</th>`).join("")}</tr></thead><tbody>`;
+  for (const r of rows) h += `<tr class="click ${S.sel === r.id ? "on" : ""}" data-room="${r.id}"><td>${esc(r.name)}${METRIC.art.has(r.id) ? " ◆" : ""}</td><td class="num">${(r.hub * 100).toFixed(1)}</td><td class="num">${r.deg}</td><td class="num">${r.save === 99 ? "–" : r.save}</td><td class="num">${r.enemy}</td><td class="num">${r.layer === 99 ? "–" : r.layer}</td><td class="num">${r.visits}</td></tr>`;
+  h += `</tbody></table></div>`;
+  if (S.sel) h += roomCard(ROOM.get(S.sel));
+  return h + credit();
+}
+/* ---------- pictures ---------- */
+let M = D.media; // built in (private copy) or loaded from this browser's imports (loadImported)
+function cellCss(url, i, m) {
+  const x = m.cols > 1 ? (i % m.cols) / (m.cols - 1) * 100 : 0, y = m.rows > 1 ? Math.floor(i / m.cols) / (m.rows - 1) * 100 : 0;
+  return `background-image:url('${url}');background-size:${m.cols * 100}% ${m.rows * 100}%;background-position:${x.toFixed(3)}% ${y.toFixed(3)}%;--ar:${m.w}/${m.h};--arn:${(m.w / m.h).toFixed(4)}`;
+}
+function bgSet(game, key) { return M && M[game] && M[game][key] || null; }
+function thumbCss(s, i) { return cellCss(s.thumb.file, i, s.thumb); }
+function fullCss(s, i) {
+  const f = s.full, k = Math.floor(i / f.per), j = i % f.per;
+  return cellCss(f.files[k], j, {cols: f.cols, rows: Math.ceil(Math.min(f.per, s.n - k * f.per) / f.cols), w: f.w, h: f.h});
+}
+function itemCss(slug) { return M && M.items && slug && slug in M.items.index ? cellCss(M.items.file, M.items.index[slug], M.items) : null; }
+const GAME = {remake: "REmake (HD Remaster)", re1: "Resident Evil (1996)"};
+function re1Note(s) { return s.parts.map(p => `ROOM${p.code} ${p.name}${p.sure !== "sure" ? ` (${p.sure} match)` : ""}${p.motion ? ", some frames motion-blurred" : ""}`).join("; "); }
+function gallery(r) {
+  const sets = {remake: bgSet("remake", r.id), re1: bgSet("re1", r.id)};
+  if (!sets.remake && !sets.re1) return `<h3>Backgrounds</h3><p class="note">${M ? "No backgrounds found for this room." : `No pictures in this copy yet. <a href="#" data-act="assets">Import them from your own discs</a>.`}</p>`;
+  const g = S.galGame && sets[S.galGame] ? S.galGame : sets.remake ? "remake" : "re1"; const s = sets[g];
+  let h = `<h3>Backgrounds</h3><div class="seg" style="margin-bottom:4px">${["remake", "re1"].map(k => `<button data-gal="${k}" aria-pressed="${k === g}" ${sets[k] ? "" : "disabled"}>${k === "remake" ? "REmake" : "RE1"} ${sets[k] ? sets[k].n : 0}</button>`).join("")}</div>`;
+  h += `<div class="bgs">${Array.from({length: s.n}, (_, i) => `<button class="bgcell" style="${thumbCss(s, i)}" data-lb="${g}|${r.id}|${i}" aria-label="${GAME[g]} camera ${i + 1}" title="${esc(s.labels[i])}"></button>`).join("")}</div>`;
+  h += `<p class="note">${g === "remake" ? (s.src === "gc" ? "The HD Remaster draws this room in real-time 3D, so it has no pre-rendered backgrounds. These are the GameCube renders from the Resident Evil wiki, 512×448." : "HD Remaster renders from your PS3 copy, 1280×960, one per camera angle. Click one for full size.") : "Decoded from your PS1 disc: " + esc(re1Note(s))}${!sets.re1 && g === "remake" ? " No RE1 counterpart: new in the REmake." : ""}</p>`;
+  return h;
+}
+let LB = null;
+function openLB(game, key, i) { LB = {game, key, i}; drawLB(); }
+function drawLB() {
+  const box = $("#lb");
+  if (!LB) { box.hidden = true; box.innerHTML = ""; return; }
+  const s = bgSet(LB.game, LB.key); const n = s.n; LB.i = (LB.i + n) % n;
+  const r = ROOM.get(LB.key); const title = r ? r.name : (M.re1_only.find(x => x.key === LB.key) || {name: LB.key}).name;
+  box.innerHTML = `<div class="bar"><h2>${esc(title)}</h2><span class="sub">${GAME[LB.game]} · camera ${LB.i + 1} of ${n} · ${esc(s.labels[LB.i])} · ${s.full.w}×${s.full.h}</span><span style="margin-left:auto" class="btnrow">
+    ${r && bgSet(LB.game === "remake" ? "re1" : "remake", LB.key) ? `<button class="btn" id="lb-sw">Show ${LB.game === "remake" ? "RE1" : "REmake"}</button>` : ""}
+    <button class="btn" id="lb-p" aria-label="Previous">&larr;</button><button class="btn" id="lb-n" aria-label="Next">&rarr;</button><button class="btn primary" id="lb-x">Close</button></span></div>
+    <div class="stage"><div class="pic" style="${fullCss(s, LB.i)}" role="img" aria-label="${esc(title)} camera ${LB.i + 1}"></div></div>
+    <div class="strip">${Array.from({length: n}, (_, k) => `<button class="bgcell ${k === LB.i ? "on" : ""}" style="${thumbCss(s, k)}" data-k="${k}" aria-label="Camera ${k + 1}"></button>`).join("")}</div>`;
+  box.hidden = false;
+  box.querySelector("#lb-x").onclick = () => { LB = null; drawLB(); };
+  box.querySelector("#lb-p").onclick = () => { LB.i--; drawLB(); };
+  box.querySelector("#lb-n").onclick = () => { LB.i++; drawLB(); };
+  const sw = box.querySelector("#lb-sw"); if (sw) sw.onclick = () => { LB = {game: LB.game === "remake" ? "re1" : "remake", key: LB.key, i: 0}; drawLB(); };
+  box.querySelectorAll(".strip button").forEach(b => b.onclick = () => { LB.i = +b.dataset.k; drawLB(); });
+  const on = box.querySelector(".strip .on"); if (on) on.scrollIntoView({block: "nearest", inline: "center"});
+  box.onclick = ev => { if (ev.target === box || ev.target.classList.contains("stage")) { LB = null; drawLB(); } };
+}
+document.addEventListener("keydown", ev => {
+  if (!LB) return;
+  if (ev.key === "Escape") { LB = null; drawLB(); } else if (ev.key === "ArrowLeft") { LB.i--; drawLB(); } else if (ev.key === "ArrowRight") { LB.i++; drawLB(); }
+});
+function paneGallery() {
+  if (!M) return `<h2>Gallery</h2><p class="note">This copy of the page has no game pictures: they are Capcom's and stay out of the public copy. Rebuild them in this browser from your own Resident Evil (PS1) disc or Resident Evil HD Remaster (PS3) copy, or from an asset pack.</p><div class="btnrow"><button class="btn primary" data-act="assets">Import pictures</button></div>` + credit();
+  const both = D.rooms.filter(r => M.remake[r.id] && M.re1[r.id]).length, onlyNew = D.rooms.filter(r => !M.re1[r.id]).length;
+  let h = `<h2>Backgrounds, room by room</h2><p class="note">HD Remaster renders from your PS3 copy on the left, the 1996 original from your PS1 disc on the right. Click any picture to page through every camera. Rooms with no RE1 picture are new in the REmake (or rebuilt past recognition); the RE1-only list shows what the REmake dropped.</p>`;
+  h += `<div class="stats"><div class="stat"><b>${Object.values(M.remake).reduce((a, m) => a + m.n, 0)}</b><span>REmake cameras</span></div><div class="stat"><b>${Object.values(M.re1).reduce((a, m) => a + m.n, 0)}</b><span>RE1 cameras</span></div><div class="stat"><b>${both}</b><span>rooms in both</span></div><div class="stat"><b>${M.re1_only.length}</b><span>RE1-only rooms</span></div></div>`;
+  h += `<div class="seg" style="margin:6px 0">${[["all", "All rooms"], ["both", "In both games"], ["new", "No RE1 counterpart"], ["re1", "RE1 only"]].map(([k, l]) => `<button data-galf="${k}" aria-pressed="${S.galFilter === k}">${l}</button>`).join("")}</div>`;
+  const cell = (g, key) => { const s = bgSet(g, key); return s ? `<button class="bgcell" style="${thumbCss(s, 0)}" data-lb="${g}|${key}|0" aria-label="${GAME[g]}"></button>` : `<span class="empty">none</span>`; };
+  for (const a of D.areas) {
+    let rows = "";
+    if (S.galFilter !== "re1") for (const r of D.rooms.filter(r => r.area === a.id)) {
+      const has = !!M.re1[r.id];
+      if ((S.galFilter === "both" && !(has && M.remake[r.id])) || (S.galFilter === "new" && has)) continue;
+      rows += `<div class="galrow"><span><a href="#" data-room="${r.id}" style="color:inherit">${esc(r.name)}</a><br><span class="sub">${M.remake[r.id] ? M.remake[r.id].n : 0} / ${has ? M.re1[r.id].n : 0} cameras${has ? "" : " · new in REmake"}</span></span>${cell("remake", r.id)}${cell("re1", r.id)}</div>`;
+    }
+    if (S.galFilter === "all" || S.galFilter === "re1") for (const x of M.re1_only.filter(x => x.area === a.id))
+      rows += `<div class="galrow"><span>${esc(x.name)}<br><span class="sub">RE1 only · ROOM${x.code} · ${M.re1[x.key].n} cameras</span></span><span class="empty">none</span>${cell("re1", x.key)}</div>`;
+    if (rows) h += `<h3><i class="sw" style="background:${a.color}"></i>${esc(a.label)}</h3>` + rows;
+  }
+  return h + credit();
+}
+
+function credit() {
+  return `<div class="credit">Room outlines, door links, locks and room contents: <a href="https://www.evilresource.com/resident-evil-remake/maps" target="_blank" rel="noopener">Evil Resource</a>, traced from the GameCube map screen. Item prerequisites and event gates: hand-checked against the GameFAQs guides in the survival-horror corpus (CyricZ's item guide, Albert VVesker's puzzle guide, several walkthroughs). Door marks, stairs and raised floors are read from Evil Resource's floor images of the in-game map. Pictures: ${D.media ? "REmake backgrounds extracted from a PS3 copy of Resident Evil HD (1280×960); RE1 backgrounds decoded from the PS1 disc; item pictures from Evil Resource" : M ? "rebuilt in this browser from your own copies of the games (Assets)" : "none ship with this copy; import them from your own discs (Assets)"}. All game art is Capcom's. Built ${esc(D.built)}.</div>`;
+}
+
+/* ---------- importers ---------- */
+// Readers for the player's own game files. Everything here works on read(offset, length) -> Uint8Array, so the same
+// code runs on a File in the browser and on a file descriptor in the Node test (tools/test_import.js).
+const u16be = (b, o) => b[o] << 8 | b[o + 1], u32be = (b, o) => (b[o] << 24 | b[o + 1] << 16 | b[o + 2] << 8 | b[o + 3]) >>> 0;
+const u16le = (b, o) => b[o] | b[o + 1] << 8, u32le = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
+const ascii = (b, o, n) => { let s = ""; for (let i = 0; i < n && b[o + i]; i++) s += String.fromCharCode(b[o + i]); return s; };
+function concatBytes(parts) { let n = 0; for (const p of parts) n += p.length; const out = new Uint8Array(n); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; }
+async function inflateBytes(bytes, raw) { // zlib (raw = false) or raw deflate
+  const s = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(raw ? "deflate-raw" : "deflate"));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+
+// ---- zip (asset pack): stored or deflated entries, no zip64
+async function zipEntries(read, size) {
+  const tailLen = Math.min(size, 65557), tail = await read(size - tailLen, tailLen);
+  let e = -1; for (let i = tail.length - 22; i >= 0; i--) if (u32le(tail, i) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error("not a zip file");
+  const count = u16le(tail, e + 10), cdSize = u32le(tail, e + 12), cdOff = u32le(tail, e + 16);
+  const cd = await read(cdOff, cdSize), out = []; let p = 0;
+  for (let i = 0; i < count; i++) {
+    if (u32le(cd, p) !== 0x02014b50) throw new Error("bad zip directory");
+    const method = u16le(cd, p + 10), csize = u32le(cd, p + 20), nl = u16le(cd, p + 28), el = u16le(cd, p + 30), cl = u16le(cd, p + 32), lho = u32le(cd, p + 42);
+    out.push({name: new TextDecoder().decode(cd.subarray(p + 46, p + 46 + nl)), method, csize, lho});
+    p += 46 + nl + el + cl;
+  }
+  for (const f of out) { const lh = await read(f.lho, 30); f.start = f.lho + 30 + u16le(lh, 26) + u16le(lh, 28); }
+  return out.filter(f => !f.name.endsWith("/"));
+}
+
+// ---- ISO 9660 on a PlayStation disc image: MODE2/2352 .bin (user data at +24) or a plain 2048-byte .iso
+async function openDisc(read, size) {
+  for (const [sect, skip] of [[2352, 24], [2048, 0]]) {
+    const pvd = await read(16 * sect + skip, 8);
+    if (pvd[0] === 1 && ascii(pvd, 1, 5) === "CD001") {
+      const readFile = async (lba, n) => {
+        if (sect === 2048) return read(lba * 2048, n);
+        const ns = Math.ceil(n / 2048), raw = await read(lba * sect, ns * sect), out = new Uint8Array(n);
+        for (let i = 0; i < ns; i++) out.set(raw.subarray(i * sect + skip, i * sect + skip + Math.min(2048, n - i * 2048)), i * 2048);
+        return out;
+      };
+      const files = [];
+      const walk = async (lba, n, prefix) => {
+        const d = await readFile(lba, n);
+        for (let i = 0; i < d.length;) {
+          const ln = d[i]; if (!ln) { i = (Math.floor(i / 2048) + 1) * 2048; continue; }
+          const elba = u32le(d, i + 2), esize = u32le(d, i + 10), flags = d[i + 25], nl = d[i + 32], name = ascii(d, i + 33, nl).split(";")[0];
+          i += ln; if (nl === 1 && (name === "" || name === "\x01")) continue;
+          if (flags & 2) await walk(elba, esize, prefix + name + "/"); else files.push({path: prefix + name, lba: elba, size: esize});
+        }
+      };
+      const root = await read(16 * sect + skip + 156, 34);
+      await walk(u32le(root, 2), u32le(root, 10), "");
+      return {files, readFile};
+    }
+  }
+  throw new Error("not a PlayStation disc image (expected a MODE2/2352 .bin or an .iso)");
+}
+
+// ---- PlayStation MDEC "BS" v2/v3 frames (Resident Evil 1 ROOM*.BSS: one 320x240 frame per 32 KB block)
+const MDEC = (() => {
+  const AC = "10 EOB|11 0 1|011 1 1|0100 0 2|0101 2 1|00101 0 3|00111 3 1|00110 4 1|000110 1 2|000111 5 1|000101 6 1|000100 7 1|0000110 0 4|0000100 2 2|0000111 8 1|0000101 9 1|000001 ESC|00100110 0 5|00100001 0 6|00100101 1 3|00100100 3 2|00100111 10 1|00100011 11 1|00100010 12 1|00100000 13 1|0000001010 0 7|0000001100 1 4|0000001011 2 3|0000001111 4 2|0000001001 5 2|0000001110 14 1|0000001101 15 1|0000001000 16 1|000000011101 0 8|000000011000 0 9|000000010011 0 10|000000010000 0 11|000000011011 1 5|000000010100 2 4|000000011100 3 3|000000010010 4 3|000000011110 6 2|000000010101 7 2|000000010001 8 2|000000011111 17 1|000000011010 18 1|000000011001 19 1|000000010111 20 1|000000010110 21 1|0000000011010 0 12|0000000011001 0 13|0000000011000 0 14|0000000010111 0 15|0000000010110 1 6|0000000010101 1 7|0000000010100 2 5|0000000010011 3 4|0000000010010 5 3|0000000010001 9 2|0000000010000 10 2|0000000011111 22 1|0000000011110 23 1|0000000011101 24 1|0000000011100 25 1|0000000011011 26 1|00000000011111 0 16|00000000011110 0 17|00000000011101 0 18|00000000011100 0 19|00000000011011 0 20|00000000011010 0 21|00000000011001 0 22|00000000011000 0 23|00000000010111 0 24|00000000010110 0 25|00000000010101 0 26|00000000010100 0 27|00000000010011 0 28|00000000010010 0 29|00000000010001 0 30|00000000010000 0 31|000000000011000 0 32|000000000010111 0 33|000000000010110 0 34|000000000010101 0 35|000000000010100 0 36|000000000010011 0 37|000000000010010 0 38|000000000010001 0 39|000000000010000 0 40|000000000011111 1 8|000000000011110 1 9|000000000011101 1 10|000000000011100 1 11|000000000011011 1 12|000000000011010 1 13|000000000011001 1 14|0000000000010011 1 15|0000000000010010 1 16|0000000000010001 1 17|0000000000010000 1 18|0000000000010100 6 3|0000000000011010 11 2|0000000000011001 12 2|0000000000011000 13 2|0000000000010111 14 2|0000000000010110 15 2|0000000000010101 16 2|0000000000011111 27 1|0000000000011110 28 1|0000000000011101 29 1|0000000000011100 30 1|0000000000011011 31 1";
+  const ACT = new Map(); // (length << 16 | code) -> "EOB" | "ESC" | [run, level]
+  for (const e of AC.split("|")) { const p = e.split(" "); ACT.set(p[0].length << 16 | parseInt(p[0], 2), p.length === 2 ? p[1] : [+p[1], +p[2]]); }
+  const dcl = [[3, 4, 0], [2, 0, 1], [2, 1, 2], [3, 5, 3], [3, 6, 4], [4, 14, 5], [5, 30, 6], [6, 62, 7], [7, 126, 8]];
+  const dcc = [[2, 0, 0], [2, 1, 1], [2, 2, 2], [3, 6, 3], [4, 14, 4], [5, 30, 5], [6, 62, 6], [7, 126, 7], [8, 254, 8]];
+  const DCL = new Map(dcl.map(([n, c, v]) => [n << 16 | c, v])), DCC = new Map(dcc.map(([n, c, v]) => [n << 16 | c, v]));
+  const ZZ = [0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63];
+  const Q = [2, 16, 19, 22, 26, 27, 29, 34, 16, 16, 22, 24, 27, 29, 34, 37, 19, 22, 26, 27, 29, 34, 34, 38, 22, 22, 26, 27, 29, 34, 37, 40, 22, 26, 27, 29, 32, 35, 40, 48, 26, 27, 29, 32, 35, 40, 48, 58, 26, 27, 29, 34, 38, 46, 56, 69, 27, 29, 35, 38, 46, 56, 69, 83];
+  const C = [...Array(8)].map((_, x) => [...Array(8)].map((_, u) => (u ? 1 : Math.SQRT1_2) * Math.cos((2 * x + 1) * u * Math.PI / 16) / 2));
+  const BASIS = []; for (let v = 0; v < 8; v++) for (let u = 0; u < 8; u++) { const b = new Float64Array(64); for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) b[y * 8 + x] = C[y][v] * C[x][u]; BASIS.push(b); }
+  function frame(data, w = 320, h = 240) { // -> RGBA bytes
+    const qscale = u16le(data, 4), version = u16le(data, 6);
+    const words = new Uint16Array(data.buffer.slice(data.byteOffset + 8, data.byteOffset + 8 + ((data.length - 8) & ~1)));
+    let pos = 0;
+    const peek = n => { let v = 0, p = pos; for (let i = 0; i < n; i++, p++) { const wi = p >> 4; v = v << 1 | (wi < words.length ? words[wi] >> (15 - (p & 15)) & 1 : 0); } return v; };
+    const get = n => { const v = peek(n); pos += n; return v; };
+    const vlc = (t, max) => { for (let n = 2; n <= max; n++) { const k = t.get(n << 16 | peek(n)); if (k !== undefined) { pos += n; return k; } } throw new Error("bad code at bit " + pos); };
+    const pred = [0, 0, 0];
+    const block = comp => {
+      const coef = new Float64Array(64); let dc;
+      if (version >= 3) { const size = vlc(comp === 2 ? DCL : DCC, 8); let diff = 0;
+        if (size) { diff = get(size); if (!(diff >> (size - 1))) diff -= (1 << size) - 1; }
+        pred[comp] += diff * 4; dc = pred[comp]; }
+      else { dc = get(10); if (dc >= 512) dc -= 1024; }
+      coef[0] = dc * Q[0];
+      for (let i = 0; ;) {
+        const c = vlc(ACT, 16); if (c === "EOB") break;
+        let run, lev;
+        if (c === "ESC") { run = get(6); lev = get(10); if (lev >= 512) lev -= 1024; }
+        else { [run, lev] = c; if (get(1)) lev = -lev; }
+        i += run + 1; if (i > 63) throw new Error("coefficient overflow");
+        const z = ZZ[i]; coef[z] = Math.floor(lev * qscale * Q[z] / 8);
+      }
+      const out = new Float64Array(64);
+      for (let k = 0; k < 64; k++) { const c = coef[k]; if (c) { const b = BASIS[k]; for (let j = 0; j < 64; j++) out[j] += c * b[j]; } }
+      return out;
+    };
+    const px = new Uint8ClampedArray(w * h * 4), cl = v => v < 0 ? 0 : v > 255 ? 255 : Math.trunc(v);
+    for (let mx = 0; mx < w / 16; mx++) for (let my = 0; my < h / 16; my++) {
+      const cr = block(0), cb = block(1), ys = [block(2), block(2), block(2), block(2)];
+      for (let yy = 0; yy < 16; yy++) for (let xx = 0; xx < 16; xx++) {
+        const yv = ys[(yy >> 3) * 2 + (xx >> 3)][(yy & 7) * 8 + (xx & 7)] + 128, ci = (yy >> 1) * 8 + (xx >> 1), r_ = cr[ci], b_ = cb[ci], o = ((my * 16 + yy) * w + mx * 16 + xx) * 4;
+        px[o] = cl(yv + 1.402 * r_); px[o + 1] = cl(yv - 0.3437 * b_ - 0.7143 * r_); px[o + 2] = cl(yv + 1.772 * b_); px[o + 3] = 255;
+      }
+    }
+    return px;
+  }
+  const isFrame = blk => blk[2] === 0 && blk[3] === 0x38;
+  return {frame, isFrame};
+})();
+
+// ---- PS3 retail package (.pkg): AES-128-CTR with the published PS3 package key (the same key RPCS3's installer uses)
+async function openPkg(read) {
+  const h = await read(0, 0x80);
+  if (u32be(h, 0) !== 0x7f504b47) throw new Error("not a PS3 .pkg file");
+  const items = u32be(h, 0x14), dataOff = u32be(h, 0x20) * 2 ** 32 + u32be(h, 0x24);
+  let riv = 0n; for (let i = 0; i < 16; i++) riv = riv << 8n | BigInt(h[0x70 + i]);
+  const keyBytes = new Uint8Array("2E7B71D7C9C9A14EA3221F188828B8F8".match(/../g).map(x => parseInt(x, 16)));
+  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-CTR", false, ["decrypt"]);
+  const dec = async (off, n) => { // off: within the data area
+    const start = off - off % 16, ctr = (riv + BigInt(start / 16)) % (1n << 128n), cb = new Uint8Array(16);
+    for (let i = 15, c = ctr; i >= 0; i--, c >>= 8n) cb[i] = Number(c & 255n);
+    const ct = await read(dataOff + start, n + off % 16);
+    const pt = new Uint8Array(await crypto.subtle.decrypt({name: "AES-CTR", counter: cb, length: 128}, key, ct));
+    return pt.subarray(off % 16, off % 16 + n);
+  };
+  const tab = await dec(0, items * 32), ents = [];
+  let lo = Infinity, hi = 0;
+  for (let i = 0; i < items; i++) { const o = i * 32; lo = Math.min(lo, u32be(tab, o)); hi = Math.max(hi, u32be(tab, o) + u32be(tab, o + 4)); }
+  const names = await dec(lo, hi - lo);
+  for (let i = 0; i < items; i++) { const o = i * 32, no = u32be(tab, o), ns = u32be(tab, o + 4);
+    ents.push({name: new TextDecoder("latin1").decode(names.subarray(no - lo, no - lo + ns)), off: u32be(tab, o + 8) * 2 ** 32 + u32be(tab, o + 12), size: u32be(tab, o + 16) * 2 ** 32 + u32be(tab, o + 20)}); }
+  return {entries: ents, reader: e => (o, n) => dec(e.off + o, n)};
+}
+
+// ---- MT Framework archives (Resident Evil HD): optional SFH wrapper (0x20000-byte chunks, each ending in a 16-byte
+// checksum, after a 16-byte header; layout from kapdap's re-cvx-tools), then "\0CRA" big-endian ARC, zlib entries, TEX.
+const SFH_CHUNK = 0x20000, SFH_SUM = 0x10;
+function arcView(read, size) { // -> read(off, n) over the archive with the SFH wrapper removed
+  let sfh = null;
+  return async (u, n) => {
+    if (sfh === null) { const m = await read(0, 4); sfh = m[0] === 0 && m[1] === 0x53 && m[2] === 0x46 && m[3] === 0x48; }
+    if (!sfh) return read(u, n);
+    const C = SFH_CHUNK - SFH_SUM, k0 = Math.floor(u / C), k1 = Math.floor((u + n - 1) / C);
+    const w0 = 16 + k0 * SFH_CHUNK + u % C, w1 = Math.min(size, 16 + k1 * SFH_CHUNK + (u + n - 1) % C + 1);
+    const raw = await read(w0, w1 - w0), out = new Uint8Array(n); let o = 0;
+    for (let k = k0, at = 0; k <= k1; k++) { const take = Math.min(n - o, C - (k === k0 ? u % C : 0)); out.set(raw.subarray(at, at + take), o); o += take; at += take + SFH_SUM; }
+    return out;
+  };
+}
+async function arcList(view) {
+  const h = await view(0, 8);
+  if (ascii(h, 1, 3) !== "CRA") throw new Error(ascii(h, 0, 4) === "ARC" ? "PC archives are not supported yet" : "not an MT Framework archive");
+  const n = u16be(h, 6), t = await view(8, n * 80), out = [];
+  for (let i = 0; i < n; i++) { const o = i * 80; out.push({name: ascii(t, o, 64), cs: u32be(t, o + 68), off: u32be(t, o + 76)}); }
+  return out;
+}
+async function arcRead(view, e) { const d = await view(e.off, e.cs); return d[1] === 0x58 && d[2] === 0x45 && d[3] === 0x54 ? d : inflateBytes(d); }
+function texInfo(t) { const w2 = u32be(t, 8), w3 = u32be(t, 12); return {mips: w2 & 0x3f, w: (w2 >>> 6) & 0x1fff, h: (w2 >>> 19) & 0x1fff, fmt: (w3 >>> 8) & 0xff}; }
+function rgb565(c, out, o) { out[o] = (c >> 11 & 31) * 255 / 31 + .5 | 0; out[o + 1] = (c >> 5 & 63) * 255 / 63 + .5 | 0; out[o + 2] = (c & 31) * 255 / 31 + .5 | 0; }
+function decodeBC(t) { // TEX -> {w, h, px: RGBA} for DXT1 (19, 20, 25) and DXT5 (23, 24, ...)
+  const {mips, w, h, fmt} = texInfo(t), dxt1 = [19, 20, 25].includes(fmt), bs = dxt1 ? 8 : 16;
+  if (!dxt1 && ![23, 24, 31, 35, 37, 47].includes(fmt)) throw new Error("texture format " + fmt);
+  const size = w * h / 16 * bs, src = mips === 1 ? t.subarray(t.length - size) : t.subarray(t.length - Math.floor(size * 4 / 3)).subarray(0, size);
+  const px = new Uint8ClampedArray(w * h * 4), pal = new Uint8Array(16), al = new Uint8Array(8);
+  for (let by = 0, p = 0; by < h; by += 4) for (let bx = 0; bx < w; bx += 4, p += bs) {
+    let a0 = 0, abits = 0n;
+    const cp = dxt1 ? p : p + 8;
+    if (!dxt1) { al[0] = src[p]; al[1] = src[p + 1]; for (let i = 2; i < 8; i++) al[i] = al[0] > al[1] ? ((8 - i) * al[0] + (i - 1) * al[1]) / 7 + .5 | 0 : i < 6 ? ((6 - i) * al[0] + (i - 1) * al[1]) / 5 + .5 | 0 : i === 6 ? 0 : 255;
+      for (let i = 7; i >= 2; i--) abits = abits << 8n | BigInt(src[p + i]); a0 = 1; }
+    const c0 = u16le(src, cp), c1 = u16le(src, cp + 2); rgb565(c0, pal, 0); rgb565(c1, pal, 4); pal[3] = pal[7] = pal[11] = 255; pal[15] = 255;
+    if (c0 > c1 || !dxt1) for (let k = 0; k < 3; k++) { pal[8 + k] = (2 * pal[k] + pal[4 + k]) / 3 + .5 | 0; pal[12 + k] = (pal[k] + 2 * pal[4 + k]) / 3 + .5 | 0; }
+    else { for (let k = 0; k < 3; k++) { pal[8 + k] = (pal[k] + pal[4 + k]) / 2 + .5 | 0; pal[12 + k] = 0; } pal[15] = 0; }
+    const bits = u32le(src, cp + 4);
+    for (let i = 0; i < 16; i++) { const x = bx + (i & 3), y = by + (i >> 2), o = (y * w + x) * 4, c = (bits >>> (2 * i) & 3) * 4;
+      px[o] = pal[c]; px[o + 1] = pal[c + 1]; px[o + 2] = pal[c + 2]; px[o + 3] = a0 ? al[Number(abits >> BigInt(3 * i) & 7n)] : pal[c + 3]; }
+  }
+  return {w, h, px};
+}
+async function arcBackground(read, size) { // first base map of an REmake HD camera archive
+  const view = arcView(read, size), e = (await arcList(view)).find(x => x.name.endsWith("_BM_NOMIP"));
+  return e ? decodeBC(await arcRead(view, e)) : null;
+}
+/* ---------- end importers ---------- */
+
+/* ---------- assets: pictures from the player's own copies, kept in this browser ---------- */
+// A public copy ships no game art and none of Evil Resource's descriptions. The Assets dialog rebuilds the same picture
+// sheets the page uses from a Resident Evil (PS1) disc image, a Resident Evil HD Remaster (PS3) .pkg or game folder, or an
+// asset pack zip (tools/make_pack.py), and keeps them in IndexedDB. Nothing is uploaded anywhere.
+const IDB = {
+  db: null,
+  open() { if (this.db) return Promise.resolve(this.db);
+    return new Promise((ok, no) => { const r = indexedDB.open("remake-atlas-assets", 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore("files"); r.result.createObjectStore("meta"); };
+      r.onsuccess = () => ok(this.db = r.result); r.onerror = () => no(r.error); }); },
+  async run(store, mode, fn) { const db = await this.open();
+    return new Promise((ok, no) => { const t = db.transaction(store, mode), out = fn(t.objectStore(store)); t.oncomplete = () => ok(out && out.result); t.onerror = t.onabort = () => no(t.error); }); },
+  put(store, k, v) { return this.run(store, "readwrite", s => s.put(v, k)); },
+  get(store, k) { return this.run(store, "readonly", s => s.get(k)); },
+  async getMany(keys) { const db = await this.open();
+    return new Promise((ok, no) => { const t = db.transaction("files", "readonly"), st = t.objectStore("files"), out = new Map();
+      for (const k of keys) { const r = st.get(k); r.onsuccess = () => out.set(k, r.result); }
+      t.oncomplete = () => ok(out); t.onerror = () => no(t.error); }); },
+  clear() { return Promise.all(["files", "meta"].map(n => this.run(n, "readwrite", s => s.clear()))); },
+};
+const emptyMedia = () => ({remake: {}, re1: {}, re1_only: [], items: null, icons: null});
+const fileRead = f => (o, n) => f.slice(o, o + n).arrayBuffer().then(b => new Uint8Array(b));
+const tick = () => new Promise(r => setTimeout(r));
+let IMG_TYPE = null;
+async function imgType() { // WebP where the browser can write it, JPEG otherwise
+  if (!IMG_TYPE) { const c = canvasOf(2, 2), b = await new Promise(r => c.toBlob(r, "image/webp", .8)); IMG_TYPE = b && b.type === "image/webp" ? "image/webp" : "image/jpeg"; }
+  return IMG_TYPE;
+}
+function canvasOf(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+function pxCanvas(px, w, h) { const c = canvasOf(w, h); c.getContext("2d").putImageData(new ImageData(px, w, h), 0, 0); return c; }
+async function saveCanvas(c, path, q = .82) { const t = await imgType(), b = await new Promise(r => c.toBlob(r, t, q)), p = path + (t === "image/webp" ? ".webp" : ".jpg"); await IDB.put("files", p, b); return p; }
+async function pool(jobs, n) { let i = 0; await Promise.all([...Array(n)].map(async () => { while (i < jobs.length) await jobs[i++](); })); }
+const MIME = {webp: "image/webp", jpg: "image/jpeg", png: "image/png", json: "application/json"};
+function applyTexts(t) { for (const r of D.rooms) { const a = t[r.id]; if (a) r.contents.forEach((c, i) => { if (a[i] && !c.d) c.d = a[i]; }); } }
+async function loadImported() { // public copy: pictures and descriptions imported earlier in this browser
+  if (D.media) return;
+  let m, texts;
+  try { [m, texts] = await Promise.all([IDB.get("meta", "media"), IDB.get("meta", "texts")]); } catch (e) { return; }
+  if (texts) applyTexts(texts);
+  if (!m) { M = null; return; }
+  m = Object.assign(emptyMedia(), m);
+  const refs = []; // [object, key] for every stored file the index points at
+  for (const g of ["remake", "re1"]) for (const k in m[g]) { const e = m[g][k]; refs.push([e.thumb, "file"]); e.full.files.forEach((_, i) => refs.push([e.full.files, i])); }
+  if (m.items) refs.push([m.items, "file"]); if (m.icons) refs.push([m.icons, "file"]);
+  const blobs = await IDB.getMany([...new Set(refs.map(([o, k]) => o[k]).filter(Boolean))]), urls = new Map();
+  for (const [p, b] of blobs) if (b) urls.set(p, URL.createObjectURL(b));
+  for (const [o, k] of refs) o[k] = urls.get(o[k]) || "";
+  M = m;
+}
+
+// RE1 (PlayStation): each group of the plan is one sheet of 320x240 frames, 4 across, as tools/media.py makes them
+async function importRE1(file, ui) {
+  ui.say("Reading the disc's file table…");
+  const disc = await openDisc(fileRead(file), file.size), plan = D.plan.re1;
+  const bss = new Map(disc.files.filter(f => /ROOM\w+\.BSS$/i.test(f.path)).map(f => [f.path.split("/").pop().replace(/\.BSS$/i, "").slice(4).toUpperCase(), f]));
+  if (!bss.size) throw new Error("No ROOM*.BSS backgrounds on this disc. Is it Resident Evil for the PlayStation?");
+  const med = Object.assign(emptyMedia(), await IDB.get("meta", "media")), keys = Object.keys(plan); let done = 0, frames = 0, missing = 0;
+  for (const key of keys) {
+    if (ui.stop) throw new Error("Stopped.");
+    const g = plan[key], n = g.labels.length, rows = Math.ceil(n / 4), sheet = canvasOf(4 * 320, rows * 240), ctx = sheet.getContext("2d"), cache = new Map();
+    for (let i = 0; i < n; i++) {
+      const [, code, k] = /^ROOM(\w+)_(\d+)$/.exec(g.labels[i]), f = bss.get(code.toUpperCase());
+      if (!f) { missing++; continue; }
+      if (!cache.has(code)) cache.set(code, await disc.readFile(f.lba, f.size));
+      const blk = cache.get(code).subarray(+k * 32768, (+k + 1) * 32768);
+      if (!MDEC.isFrame(blk)) { missing++; continue; }
+      try { ctx.putImageData(new ImageData(MDEC.frame(blk), 320, 240), (i % 4) * 320, Math.floor(i / 4) * 240); frames++; } catch (e) { missing++; }
+    }
+    const path = await saveCanvas(sheet, `re1/${key}`);
+    med.re1[key] = {n, labels: g.labels, parts: g.parts, thumb: {file: path, cols: 4, rows, w: 320, h: 240}, full: {files: [path], per: n, cols: 4, w: 320, h: 240}};
+    ui.progress(++done / keys.length, `RE1 backgrounds: ${done} of ${keys.length} rooms`); await tick();
+  }
+  med.re1_only = D.plan.re1_only; await IDB.put("meta", "media", med);
+  return `RE1: ${frames} backgrounds for ${done} rooms` + (missing ? ` (${missing} frames not on this disc)` : "") + ".";
+}
+
+// REmake HD (PS3): every camera of the plan, full size one file each, plus a thumbnail sheet per room; then the game's
+// inventory icons as the item pictures. Reads only the parts of each archive it needs.
+async function importPS3(src, ui) {
+  const by = new Map(), rel = n => { const m = /(?:^|\/)arc\/(.+)$/.exec(n.replace(/\\/g, "/")); return m && "arc/" + m[1]; };
+  if (src instanceof File) {
+    ui.say("Opening the package…");
+    const pkg = await openPkg(fileRead(src));
+    for (const e of pkg.entries) { const r = rel(e.name); if (r) by.set(r, {read: pkg.reader(e), size: e.size}); }
+  } else for (const f of src) { const r = rel(f.webkitRelativePath || f.name); if (r) by.set(r, {read: fileRead(f), size: f.size}); }
+  if (!by.has("arc/scr/st01/r106/r10600.arc")) throw new Error("No REmake camera archives (arc/scr/…) found. Pick the game's .pkg file, or its USRDIR or nativePS3 folder.");
+  const plan = D.plan.remake, rooms = Object.keys(plan), total = rooms.reduce((a, r) => a + plan[r].length, 0);
+  const med = Object.assign(emptyMedia(), await IDB.get("meta", "media")); let done = 0, missing = 0, roomsDone = 0;
+  for (const room of rooms) {
+    if (ui.stop) throw new Error("Stopped.");
+    const got = []; // [camera index, label, stored file, 192x144 thumbnail]
+    await pool(plan[room].map((lab, i) => async () => {
+      if (ui.stop) return;
+      const [code, cam] = lab.split("_"), f = by.get(`arc/scr/st0${code[1]}/${code}/${code}${cam}.arc`);
+      const bg = f && await arcBackground(f.read, f.size).catch(() => null);
+      if (!bg) { missing++; return; }
+      const c = pxCanvas(bg.px, bg.w, bg.h), t = canvasOf(192, 144), tc = t.getContext("2d");
+      tc.imageSmoothingQuality = "high"; tc.drawImage(c, 0, 0, 192, 144);
+      got.push([i, lab, await saveCanvas(c, `ps3/${room}/${lab}`, .8), t]);
+      ui.progress(++done / total, `REmake backgrounds: ${done} of ${total} cameras`);
+    }), 3);
+    if (!got.length) continue; // nothing for this room in what was picked: keep whatever an earlier import gave it
+    got.sort((a, b) => a[0] - b[0]);
+    const n = got.length, rows = Math.ceil(n / 6), th = canvasOf(6 * 192, rows * 144), tctx = th.getContext("2d");
+    got.forEach(([, , , t], k) => tctx.drawImage(t, (k % 6) * 192, Math.floor(k / 6) * 144));
+    const tp = await saveCanvas(th, `ps3/${room}/thumbs`, .8);
+    med.remake[room] = {n, src: "ps3", labels: got.map(g => g[1]), thumb: {file: tp, cols: 6, rows, w: 192, h: 144}, full: {files: got.map(g => g[2]), per: 1, cols: 1, w: 1280, h: 960}};
+    await IDB.put("meta", "media", med); roomsDone++;
+  }
+  let icons = 0; const ia = by.get("arc/id/e_rom/subscr/itemicon.arc");
+  if (ia && (!med.items || med.items.src === "ps3")) {
+    ui.say("Item pictures from the game's inventory icons…");
+    const view = arcView(ia.read, ia.size), list = await arcList(view), slugs = Object.keys(D.plan.icons), index = {};
+    const big = canvasOf(12 * 225, Math.ceil(slugs.length / 12) * 180), small = canvasOf(16 * 80, Math.ceil(slugs.length / 16) * 80);
+    const bx = big.getContext("2d"), sx = small.getContext("2d"); bx.fillStyle = sx.fillStyle = "#000"; bx.fillRect(0, 0, big.width, big.height); sx.fillRect(0, 0, small.width, small.height);
+    for (const [i, slug] of slugs.entries()) {
+      const e = list.find(x => x.name.endsWith(`i${String(D.plan.icons[slug]).padStart(3, "0")}s_ID`)); if (!e) continue;
+      const t = decodeBC(await arcRead(view, e)), c = pxCanvas(t.px, t.w, t.h);
+      let x0 = t.w, y0 = t.h, x1 = 0, y1 = 0; // visible part of the icon
+      for (let y = 0; y < t.h; y++) for (let x = 0; x < t.w; x++) if (t.px[(y * t.w + x) * 4 + 3] > 24) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+      if (x1 < x0) continue;
+      const side = Math.max(x1 - x0, y1 - y0) * 1.08 + 2, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+      sx.drawImage(c, cx - side / 2, cy - side / 2, side, side, (i % 16) * 80, Math.floor(i / 16) * 80, 80, 80);
+      bx.drawImage(c, cx - side / 2, cy - side / 2, side, side, (i % 12) * 225 + 32, Math.floor(i / 12) * 180 + 10, 160, 160);
+      index[slug] = i; icons++;
+    }
+    med.items = {src: "ps3", file: await saveCanvas(big, "ps3/items", .86), cols: 12, rows: Math.ceil(slugs.length / 12), w: 225, h: 180, index};
+    med.icons = {src: "ps3", file: await saveCanvas(small, "ps3/item_icons", .86), cols: 16, size: 80, w: small.width, h: small.height, index};
+    await IDB.put("meta", "media", med);
+  }
+  return `REmake: ${done} camera backgrounds for ${roomsDone} rooms` + (missing ? ` (${missing} cameras not found in what you picked)` : "") + (icons ? `, ${icons} item pictures` : "") + ".";
+}
+
+// Asset pack: the media folder of a private build plus Evil Resource's descriptions (texts.json), zipped by tools/make_pack.py
+async function importPack(file, ui) {
+  const read = fileRead(file), ents = await zipEntries(read, file.size);
+  if (!ents.some(e => /(^|\/)media\.json$/.test(e.name))) throw new Error("No media.json in this zip: it is not an atlas asset pack.");
+  let media = null, texts = null, done = 0;
+  for (const e of ents) {
+    if (ui.stop) throw new Error("Stopped.");
+    let blob = file.slice(e.start, e.start + e.csize);
+    if (e.method === 8) blob = new Blob([await inflateBytes(new Uint8Array(await blob.arrayBuffer()), true)]);
+    else if (e.method) throw new Error("Unsupported compression in " + e.name);
+    if (/(^|\/)media\.json$/.test(e.name)) media = JSON.parse(await blob.text());
+    else if (/(^|\/)texts\.json$/.test(e.name)) texts = JSON.parse(await blob.text());
+    else await IDB.put("files", e.name, new Blob([blob], {type: MIME[e.name.split(".").pop()] || ""}));
+    ui.progress(++done / ents.length, `Asset pack: ${done} of ${ents.length} files`);
+  }
+  if (media.items) media.items.src = "pack";
+  await IDB.put("meta", "media", Object.assign(emptyMedia(), media));
+  if (texts) await IDB.put("meta", "texts", texts);
+  return `Asset pack: ${Object.keys(media.remake || {}).length} REmake rooms, ${Object.keys(media.re1 || {}).length} RE1 groups, ${media.items ? Object.keys(media.items.index).length : 0} item pictures${texts ? ", room descriptions" : ""}.`;
+}
+
+const AS = {busy: false, stop: false, msg: "", frac: 0, log: []};
+function assetStatus() {
+  if (!M) return `<p class="note">No pictures yet.</p>`;
+  const r = Object.values(M.remake || {}), src = r.length ? (r.some(x => x.src === "gc") ? "PS3 + GameCube" : "PS3") : "";
+  return `<ul class="list"><li><span class="grow">REmake backgrounds</span><span class="num">${r.length ? r.length + " rooms · " + src : "–"}</span></li><li><span class="grow">RE1 backgrounds</span><span class="num">${Object.keys(M.re1 || {}).length || "–"}</span></li><li><span class="grow">Item pictures</span><span class="num">${M.items ? Object.keys(M.items.index).length + (M.items.src === "ps3" ? " · game icons" : "") : "–"}</span></li><li><span class="grow">Room descriptions</span><span class="num">${D.rooms.some(x => x.contents.some(c => c.d)) ? "yes" : "–"}</span></li></ul>`;
+}
+function drawAssets() {
+  const box = $("#assets"); if (box.hidden) return;
+  const busy = AS.busy, dis = busy || !D.plan ? "disabled" : "";
+  box.innerHTML = `<div class="abox" role="document"><div class="mbar"><h2>Pictures</h2><button class="btn" id="as-x" style="margin-left:auto" ${busy ? "disabled" : ""}>Close</button></div>
+    ${D.media ? `<p class="note">This copy has its pictures built in. Imports are kept for public copies of the page.</p>` : `<p class="note">The game pictures are Capcom's, so a public copy of this page carries none. Rebuild them here from your own copies; they stay in this browser and nothing is uploaded.</p>`}
+    ${assetStatus()}
+    <h3>Resident Evil (PlayStation, 1996)</h3><p class="note">A disc image as <b>.bin</b> (MODE2/2352) or <b>.iso</b>. For a .chd, convert first: <code>chdman extractcd -i game.chd -o game.cue -ob game.bin</code>. Tested with the USA release.</p>
+    <div class="btnrow"><button class="btn primary" data-pick="as-re1" ${dis}>Choose disc image…</button></div>
+    <h3>Resident Evil HD Remaster (PlayStation 3)</h3><p class="note">The game's <b>.pkg</b> file, or its installed <b>USRDIR</b> (or <b>nativePS3</b>) folder. Gives the 1280×960 backgrounds and the game's own item icons. About 1,650 cameras: a few minutes.</p>
+    <div class="btnrow"><button class="btn primary" data-pick="as-pkg" ${dis}>Choose .pkg…</button><button class="btn" data-pick="as-dir" ${dis}>Choose folder…</button></div>
+    <h3>Asset pack</h3><p class="note">A <b>.zip</b> made by <code>tools/make_pack.py</code> from a private build: every picture plus Evil Resource's room descriptions.</p>
+    <div class="btnrow"><button class="btn" data-pick="as-zip" ${dis}>Choose asset pack…</button></div>
+    ${busy || AS.msg ? `<div class="aprog"><progress max="1" value="${AS.frac}"></progress><p class="sub" id="as-msg">${esc(AS.msg)}</p>${busy ? `<button class="btn" id="as-stop">Stop</button>` : ""}</div>` : ""}
+    ${AS.log.map(l => `<p class="note">${esc(l)}</p>`).join("")}
+    ${!D.media ? `<div class="btnrow" style="margin-top:14px"><button class="btn" id="as-clear" ${busy ? "disabled" : ""}>Remove imported pictures</button></div>` : ""}
+    <input type="file" id="as-re1" accept=".bin,.iso,.img" hidden><input type="file" id="as-pkg" accept=".pkg" hidden><input type="file" id="as-dir" webkitdirectory hidden><input type="file" id="as-zip" accept=".zip" hidden></div>`;
+  box.querySelector("#as-x").onclick = () => { box.hidden = true; };
+  box.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => box.querySelector("#" + b.dataset.pick).click());
+  const go = (fn, arg) => runImport(fn, arg);
+  box.querySelector("#as-re1").onchange = ev => ev.target.files[0] && go(importRE1, ev.target.files[0]);
+  box.querySelector("#as-pkg").onchange = ev => ev.target.files[0] && go(importPS3, ev.target.files[0]);
+  box.querySelector("#as-dir").onchange = ev => ev.target.files.length && go(importPS3, ev.target.files);
+  box.querySelector("#as-zip").onchange = ev => ev.target.files[0] && go(importPack, ev.target.files[0]);
+  const st = box.querySelector("#as-stop"); if (st) st.onclick = () => { AS.stop = true; };
+  const cl = box.querySelector("#as-clear"); if (cl) cl.onclick = async () => { await IDB.clear(); location.reload(); };
+}
+async function runImport(fn, arg) {
+  Object.assign(AS, {busy: true, stop: false, frac: 0, msg: "Starting…"}); drawAssets();
+  const ui = {get stop() { return AS.stop; }, say(m) { AS.msg = m; const e = $("#as-msg"); if (e) e.textContent = m; },
+    progress(f, m) { AS.frac = f; AS.msg = m; const p = $("#assets progress"), e = $("#as-msg"); if (p) p.value = f; if (e) e.textContent = m; }};
+  try { AS.log.unshift(await fn(arg, ui)); AS.msg = "Done."; }
+  catch (e) { AS.log.unshift("Import failed: " + (e && e.message || e)); AS.msg = ""; }
+  AS.busy = false; await loadImported(); drawAssets(); render();
+}
+ACT.assets = () => { const b = $("#assets"); b.hidden = false; drawAssets(); };
+$("#assets-btn").onclick = ACT.assets;
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("#assets").hidden && !AS.busy) $("#assets").hidden = true; });
+
+/* ---------- wiring ---------- */
+document.querySelectorAll("#charseg button").forEach(b => b.onclick = () => {
+  S.char = b.dataset.c; document.querySelectorAll("#charseg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  resetRun(); recompute(); BEHIND.clear(); render();
+});
+$("#diff").onchange = () => { S.diff = $("#diff").value; render(); };
+// Style: the REmake's look (default), RE2's PlayStation status screen or the plain atlas; a choice is remembered in this browser
+function setSkin(v) { document.documentElement.dataset.skin = v; $("#skin").value = v; readRamp(); }
+$("#skin").onchange = () => { setSkin($("#skin").value); try { localStorage.setItem("atlas-style", $("#skin").value); } catch (e) {} render(); };
+{ let v = null; try { v = localStorage.getItem("atlas-style"); } catch (e) {}
+  setSkin(["atlas", "re2", "remake"].includes(v) ? v : "remake"); }
+$("#colorby").onchange = () => { S.colorby = $("#colorby").value; draw(); };
+for (const k of ["labels", "doors", "pins", "route", "links", "bgtip"]) $("#t-" + k).onchange = ev => { S.show[k] = ev.target.checked; draw(); };
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; if (S.tab !== "route") playStop(); if (S.tab === "route" && S.routeLeg < 0 && S.colorby === "reach") { S.colorby = "visits"; $("#colorby").value = "visits"; } draw(); drawPane(); });
+$("#subtitle").textContent = `Resident Evil (2002) · ${D.rooms.length} rooms · ${D.doors.length} doors · ${D.tokens.length} items and events`;
+recompute(); fitView(); render();
+if (!D.media) loadImported().then(render);
+</script>
