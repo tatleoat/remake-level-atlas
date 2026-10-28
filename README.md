@@ -60,7 +60,10 @@ Notes:
   - bone text and amber labels
   - copper wall lines on a khaki map
   - a blood-red route
-  - serif type, film grain and a vignette
+  - type after the game's menus: Archivo Narrow for commands and room names (the game's Equip/Use/Combine buttons
+    are a condensed grotesque), IM Fell English for headings (old print, like the files), Special Elite typewriter
+    for numbers and tags; all free Google Fonts
+  - film grain and a vignette
 
 ## Layout
 

@@ -4,7 +4,7 @@
 <title>REmake Level Atlas</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Libre+Baskerville:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=VT323&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Libre+Baskerville:wght@400;700&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Archivo+Narrow:wght@400;500;600;700&family=VT323&display=swap">
 <style>
 /* Layout: one-screen instrument. Map on the left (floor tabs above it), case-file side panel on the right; stacks on phones.
    Single dark theme on purpose: it mirrors the game's own map screen. */
@@ -251,7 +251,9 @@ table.t tr.click:hover, table.t tr.on { background: var(--raise); }
    RE2 (PlayStation, 1998): colours sampled from the game's own status-screen textures (COMMON/DATA/ST0.TIM, SELECT_W.TIM,
    CONFIG.TIM on the Leon disc): brushed gunmetal plates, green ECG/LCD screens, navy fields, pale green-white serif caps.
    REmake (GameCube, 2002): sampled from the HD Remaster's status, file and map screens (id/e_rom/subscr/*.arc): green-black
-   gunmetal, olive-tan file paper, bone text, amber labels, copper wall lines on the map, serif type, grain and vignette. */
+   gunmetal, olive-tan file paper, bone text, amber labels, copper wall lines on the map, grain and vignette. Type follows the
+   game's menus: a condensed grotesque for commands (Equip/Use/Combine) -> Archivo Narrow; old print for the files and
+   headings -> IM Fell English; the save-room typewriter for numbers and tags -> Special Elite. All OFL Google Fonts. */
 :root[data-skin="re2"] {
   --ink: #040605; --panel: #2c302d; --raise: #3c413c; --line: #121513; --text: #dce8dc; --muted: #99a097;
   --room: #11142a; --room-line: #8193c9; --reach: #2845a6; --reach-hi: #3a5cc8; --seen: #5b7bd8; --locked: #4c1418;
@@ -288,23 +290,24 @@ table.t tr.click:hover, table.t tr.on { background: var(--raise); }
   --ink: #090a06; --panel: #17170f; --raise: #29271b; --line: #463e27; --text: #eee5c9; --muted: #b0a47e;
   --room: #1d1c15; --room-line: #a0733f; --reach: #5d553a; --reach-hi: #756a4a; --seen: #857a52; --locked: #3e1d16; --route: #c8341f;
   --amber: #e5ba68; --amber-dim: #8a6a34; --herb: #9bb562; --blood: #c8492f; --violet: #a184c8; --door: #d9b46c; --hatch: #8f7f5b;
-  --display: "EB Garamond", Garamond, Georgia, serif; --ui: "EB Garamond", Garamond, Georgia, serif; --lcd: "EB Garamond", Georgia, serif;
+  --display: "IM Fell English", Garamond, Georgia, serif; --ui: "Archivo Narrow", "Arial Narrow", sans-serif; --lcd: "Special Elite", "Courier New", monospace;
+  --mono: "Special Elite", "Courier New", monospace;
   --ramp: #1d1c15, #3b3523, #5e5236, #857650, #b0965c, #d9b46a, #f2e2b4;
   --mapbg: radial-gradient(ellipse at 50% 45%, #211c12 0%, #0d0b07 65%, #050402 100%);
 }
-:root[data-skin="remake"] body { background: #090a06; font-size: 15.5px; }
+:root[data-skin="remake"] body { background: #090a06; font-size: 14.5px; }
 :root[data-skin="remake"] body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 40; opacity: .09; mix-blend-mode: overlay;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
 :root[data-skin="remake"] .top { background: linear-gradient(#1c1e14, #0e100a); border-bottom: 1px solid #000; box-shadow: inset 0 -1px #5e4b2a; padding-inline: 12px; margin-inline: -16px; }
-:root[data-skin="remake"] .brand h1 { font: 600 25px/1 var(--display); letter-spacing: .03em; color: #eee5c9; text-shadow: 0 2px 6px #000; }
+:root[data-skin="remake"] .brand h1 { font: 400 27px/1 var(--display); letter-spacing: .02em; color: #eee5c9; text-shadow: 0 2px 6px #000; }
 :root[data-skin="remake"] .side { background: radial-gradient(ellipse at 50% 20%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, .5) 100%), repeating-linear-gradient(transparent 0 27px, rgba(24, 20, 8, .32) 27px 28px), #4b462d;
   border: 1px solid #12110a; box-shadow: inset 0 0 0 1px #6b5c37, 0 12px 30px rgba(0, 0, 0, .65); }
 :root[data-skin="remake"] .pane { color: #f3ead0; }
 :root[data-skin="remake"] .pane .sub, :root[data-skin="remake"] .pane .note { color: #d3c69c; }
-:root[data-skin="remake"] .pane h2 { font: 600 21px/1.15 var(--display); text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
-:root[data-skin="remake"] .pane h3 { font: 600 12px/1.3 var(--display); letter-spacing: .14em; color: #e5ba68; }
+:root[data-skin="remake"] .pane h2, :root[data-skin="remake"] .modal h2, :root[data-skin="remake"] .lb .bar h2 { font: 400 23px/1.15 var(--display); text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+:root[data-skin="remake"] .pane h3, :root[data-skin="remake"] .modal h3 { font: 400 14px/1.3 "IM Fell English SC", var(--display); text-transform: none; letter-spacing: .08em; color: #e5ba68; }
 :root[data-skin="remake"] .tabs { background: #101109; border-bottom: 1px solid #000; }
-:root[data-skin="remake"] .tabs button { font: 500 16px var(--display); color: #a99d76; }
+:root[data-skin="remake"] .tabs button { font: 600 14.5px var(--ui); letter-spacing: .02em; color: #a99d76; }
 :root[data-skin="remake"] .tabs button[aria-selected="true"] { color: #f3ead0; background: #4b462d; border-bottom-color: transparent; box-shadow: inset 0 2px #a0733f; }
 :root[data-skin="remake"] .btn, :root[data-skin="remake"] .zoom button, :root[data-skin="remake"] select, :root[data-skin="remake"] .seg button, :root[data-skin="remake"] .chip {
   background: linear-gradient(#2f2d1f, #1a190f); border: 1px solid #5e4b2a; color: #eee5c9; border-radius: 2px; box-shadow: inset 0 1px rgba(255, 240, 200, .08); }
@@ -312,16 +315,16 @@ table.t tr.click:hover, table.t tr.on { background: var(--raise); }
 :root[data-skin="remake"] .seg button[aria-pressed="true"], :root[data-skin="remake"] .chip[aria-pressed="true"] { background: #4b462d; color: #f3ead0; box-shadow: inset 0 -2px #a0733f; }
 :root[data-skin="remake"] .btn.primary { border-color: #a0733f; color: #e5ba68; }
 :root[data-skin="remake"] .stat { background: rgba(14, 12, 5, .45); border: 1px solid rgba(0, 0, 0, .45); box-shadow: inset 0 1px rgba(255, 240, 200, .06); }
-:root[data-skin="remake"] .stat b { font-size: 24px; font-weight: 500; color: #f3ead0; font-variant-numeric: lining-nums tabular-nums; }
+:root[data-skin="remake"] .stat b { font-size: 22px; font-weight: 400; color: #f3ead0; }
 :root[data-skin="remake"] .stat span { color: #cdbf93; }
 :root[data-skin="remake"] .mapwrap { border: 1px solid #2b2617; box-shadow: 0 0 0 1px #000; }
 :root[data-skin="remake"] .mapwrap::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 140px rgba(0, 0, 0, .85); }
 :root[data-skin="remake"] .legend, :root[data-skin="remake"] .tip { background: rgba(22, 20, 11, .93); border-color: #5e4b2a; }
 :root[data-skin="remake"] .stepper { background: #4b462d; border-bottom-color: rgba(0, 0, 0, .4); }
-:root[data-skin="remake"] .floorname { font: italic 400 22px var(--display); color: #c9b98b; }
+:root[data-skin="remake"] .floorname { font: italic 400 25px var(--display); color: #c9b98b; }
 :root[data-skin="remake"] .lbl { stroke: rgba(10, 8, 3, .9); }
 :root[data-skin="remake"] .route { filter: drop-shadow(0 0 1.5px rgba(0, 0, 0, .9)); }
-:root[data-skin="remake"] .ftitle { font: 500 16px var(--display); fill: #b0a47e; }
+:root[data-skin="remake"] .ftitle { font: 400 17px var(--display); fill: #b0a47e; }
 :root[data-skin="remake"] ul.list li.click:hover, :root[data-skin="remake"] ul.list li.on { background: rgba(14, 12, 5, .4); }
 :root[data-skin="remake"] table.t th { background: #3e3a25; }
 :root[data-skin="remake"] .way[aria-pressed="true"], :root[data-skin="remake"] .lstop.now { background: rgba(14, 12, 5, .45); }
